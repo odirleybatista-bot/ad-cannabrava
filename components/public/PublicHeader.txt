@@ -1,0 +1,45 @@
+import Link from "next/link";
+
+export default function PublicHeader() {
+  return (
+    <header className="border-b bg-white">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
+        <Link href="/" className="flex items-center gap-3">
+          <div className="flex h-14 w-14 items-center justify-center rounded-xl border text-center text-[9px] font-bold">
+            ESCUDO
+            <br />
+            OFICIAL
+          </div>
+
+          <div>
+            <strong className="block text-sm">A.D. Cannabrava</strong>
+            <span className="text-xs text-slate-500">
+              Associação Desportiva Cannabrava
+            </span>
+          </div>
+        </Link>
+
+        <nav className="hidden items-center gap-5 text-sm font-medium lg:flex">
+          <Link href="/">HOME</Link>
+
+          <Link href="/institucional">Institucional</Link>
+
+          <Link href="/modalidades">Modalidades</Link>
+
+          <Link href="/parceiros">Parceiros</Link>
+
+          <Link href="/noticias">Notícias</Link>
+
+          <Link href="/transparencia">Transparência</Link>
+
+          <Link
+            href="/login"
+            className="rounded-lg border px-4 py-2"
+          >
+            Área Restrita
+          </Link>
+        </nav>
+      </div>
+    </header>
+  );
+}
