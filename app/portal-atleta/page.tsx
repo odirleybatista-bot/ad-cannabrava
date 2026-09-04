@@ -1,83 +1,129 @@
 import Link from "next/link";
-import { requireCurrentAthlete } from "@/lib/auth/current-athlete";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth/current-user";
+
+function rotuloStatus(status: string | null | undefined) {
+  const mapa: Record<string, string> = {
+    pre_cadastro: "Pré-cadastro",
+    documentos_enviados: "Documentos enviados",
+    em_analise: "Em análise",
+    correcao_solicitada: "Correção solicitada",
+    aprovado: "Aprovado",
+    vinculado: "Vinculado",
+    termo_liberado: "Termo liberado",
+    ativo: "Atleta ativo",
+    enviado: "Enviado",
+    aguardando_assinatura: "Aguardando assinatura",
+    assinado: "Assinado",
+    gerado: "Gerado",
+  };
+
+  return mapa[status || ""] || status || "Pendente";
+}
+
+function saudacao() {
+  const hora = new Date().getHours();
+
+  if (hora < 12) return "Bom dia";
+  if (hora < 18) return "Boa tarde";
+  return "Boa noite";
+}
 
 export default async function PortalAtletaPage() {
-  const { atletaId } =
-    await requireCurrentAthlete();
+  const usuario = await getCurrentUser();
+
+  if (!usuario) {
+    redirect("/login");
+  }
+
+  if (!usuario.atletaId) {
+    redirect("/portal-atleta/dados");
+  }
 
   const supabase = await createClient();
 
-  const { data: atleta } =
-    await supabase
-      .from("atletas")
-      .select(`
-        id,
-        nome,
-        apelido,
-        modalidade,
-        posicao,
-        status,
-        criado_em
-      `)
-      .eq("id", atletaId)
-      .single();
+  const { data: atleta } = await supabase
+    .from("atletas")
+    .select(`
+      id,
+      nome,
+      apelido,
+      modalidade,
+      posicao,
+      numero_camisa,
+      status,
+      data_nascimento,
+      telefone,
+      email,
+      cidade,
+      uf
+    `)
+    .eq("id", usuario.atletaId)
+    .maybeSingle();
 
   if (!atleta) {
-    return null;
+    redirect("/portal-atleta/dados");
   }
 
-  const { data: documentos } =
-    await supabase
-      .from("atleta_documentos")
-      .select("id,tipo,status")
-      .eq("atleta_id", atletaId);
+  const { data: documentos } = await supabase
+    .from("atleta_documentos")
+    .select(`
+      id,
+      tipo,
+      status
+    `)
+    .eq("atleta_id", atleta.id);
 
-  const { data: vinculo } =
-    await supabase
-      .from("atleta_vinculos")
-      .select(`
-        id,
-        modalidade,
-        temporada,
-        status,
-        data_inicio,
-        data_fim
-      `)
-      .eq("atleta_id", atletaId)
-      .eq("status", "ativo")
-      .order("criado_em", {
-        ascending: false,
-      })
-      .limit(1)
-      .maybeSingle();
-
-  const { data: termo } =
-    await supabase
-      .from("termos_compromisso")
-      .select(`
-        id,
-        status,
-        assinado_em
-      `)
-      .eq("atleta_id", atletaId)
-      .order("criado_em", {
-        ascending: false,
-      })
-      .limit(1)
-      .maybeSingle();
-
-  const {
-    count: notificacoesNaoLidas,
-  } = await supabase
-    .from("notificacoes")
-    .select("*", {
-      count: "exact",
-      head: true,
+  const { data: vinculo } = await supabase
+    .from("atleta_vinculos")
+    .select(`
+      id,
+      modalidade,
+      temporada,
+      data_inicio,
+      data_fim,
+      status
+    `)
+    .eq("atleta_id", atleta.id)
+    .order("criado_em", {
+      ascending: false,
     })
-    .eq("lida", false);
+    .limit(1)
+    .maybeSingle();
+
+  const { data: termo } = await supabase
+    .from("termos_compromisso")
+    .select(`
+      id,
+      status,
+      titulo,
+      assinado_em
+    `)
+    .eq("atleta_id", atleta.id)
+    .order("criado_em", {
+      ascending: false,
+    })
+    .limit(1)
+    .maybeSingle();
+
+  let notificacoesNaoLidas = 0;
+
+  if (usuario.usuarioId) {
+    const { count } = await supabase
+      .from("notificacoes")
+      .select("id", {
+        count: "exact",
+        head: true,
+      })
+      .eq("usuario_id", usuario.usuarioId)
+      .eq("lida", false);
+
+    notificacoesNaoLidas = count || 0;
+  }
 
   const obrigatorios = [
+    "foto_3x4",
     "identidade",
     "residencia",
     "eleitoral",
@@ -87,7 +133,8 @@ export default async function PortalAtletaPage() {
     obrigatorios.filter((tipo) =>
       documentos?.some(
         (documento) =>
-          documento.tipo === tipo
+          documento.tipo === tipo &&
+          documento.status !== "pendente"
       )
     ).length;
 
@@ -100,323 +147,840 @@ export default async function PortalAtletaPage() {
       )
     ).length;
 
+  const temCorrecao =
+    documentos?.some(
+      (documento) =>
+        documento.status === "correcao_solicitada"
+    ) || false;
+
+  const cadastroCompleto = Boolean(atleta.id);
+  const docsCompletos = documentosEnviados === 4;
+  const possuiVinculo = Boolean(vinculo);
+  const termoAssinado = termo?.status === "assinado";
+
+  const etapasConcluidas = [
+    cadastroCompleto,
+    docsCompletos,
+    possuiVinculo,
+    termoAssinado,
+  ].filter(Boolean).length;
+
+  const progresso = etapasConcluidas * 25;
+
+  let proximaAcao = {
+    titulo: "Cadastro concluído",
+    descricao:
+      "Seu cadastro está atualizado. Continue acompanhando seu portal.",
+    href: "/portal-atleta/dados",
+    botao: "Ver meus dados",
+  };
+
+  if (!docsCompletos) {
+    proximaAcao = {
+      titulo: "Envie seus documentos",
+      descricao:
+        "Complete o envio dos documentos obrigatórios para análise da associação.",
+      href: "/portal-atleta/documentos",
+      botao: "Enviar documentos",
+    };
+  } else if (temCorrecao) {
+    proximaAcao = {
+      titulo: "Documento precisa de correção",
+      descricao:
+        "Existe uma solicitação de correção. Acesse seus documentos para verificar.",
+      href: "/portal-atleta/documentos",
+      botao: "Ver correção",
+    };
+  } else if (!possuiVinculo) {
+    proximaAcao = {
+      titulo: "Aguardando vínculo esportivo",
+      descricao:
+        "Seus dados estão em análise. A administração realizará o vínculo com a modalidade e temporada.",
+      href: "/portal-atleta/historico",
+      botao: "Acompanhar situação",
+    };
+  } else if (termo && !termoAssinado) {
+    proximaAcao = {
+      titulo: "Termo disponível",
+      descricao:
+        "Seu Termo de Compromisso está disponível para leitura e aceite.",
+      href: "/portal-atleta/termo",
+      botao: "Ver termo",
+    };
+  }
+
   return (
-    <div>
+    <main className="pagina">
+      <section className="boas-vindas">
+        <div>
+          <span className="secao">PORTAL DO ATLETA</span>
 
-      <div className="mb-8">
+          <h1>
+            {saudacao()}, {atleta.apelido || atleta.nome.split(" ")[0]}!
+          </h1>
 
-        <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">
-          Portal do Atleta
-        </p>
+          <p>
+            Acompanhe seu cadastro, documentos e situação junto à
+            Associação Desportiva Cannabrava.
+          </p>
+        </div>
 
-        <h1 className="mt-1 text-3xl font-black text-[#08265a]">
-          Olá, {atleta.apelido || primeiroNome(atleta.nome)}
-        </h1>
+        <div className={`status-geral status-${atleta.status}`}>
+          <span>SITUAÇÃO</span>
+          <strong>{rotuloStatus(atleta.status)}</strong>
+        </div>
+      </section>
 
-        <p className="mt-1 text-slate-500">
-          Acompanhe seu cadastro e vínculo com a Associação Desportiva Cannabrava.
-        </p>
-
-      </div>
-
-      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-
-        <Card
-          titulo="Situação cadastral"
-          valor={nomeStatus(atleta.status)}
-          descricao="Status atual do seu cadastro"
-        />
-
-        <Card
-          titulo="Documentos"
-          valor={`${documentosEnviados}/3`}
-          descricao={`${documentosAprovados} aprovado(s)`}
-        />
-
-        <Card
-          titulo="Vínculo"
-          valor={
-            vinculo
-              ? vinculo.temporada
-              : "Pendente"
-          }
-          descricao={
-            vinculo
-              ? `${vinculo.modalidade} • ${nomeStatusVinculo(vinculo.status)}`
-              : "Aguardando definição"
-          }
-        />
-
-        <Card
-          titulo="Termo"
-          valor={
-            termo
-              ? nomeStatusTermo(termo.status)
-              : "Não disponível"
-          }
-          descricao={
-            termo?.assinado_em
-              ? `Assinado em ${formatarData(termo.assinado_em)}`
-              : "Termo de Compromisso"
-          }
-        />
-
-      </div>
-
-      <section className="mt-7 rounded-2xl border border-slate-200 bg-white p-6">
-
-        <div className="flex flex-wrap items-center justify-between gap-4">
-
-          <div>
-            <h2 className="text-lg font-bold text-[#08265a]">
-              Andamento do cadastro
-            </h2>
-
-            <p className="mt-1 text-sm text-slate-500">
-              Veja em qual etapa seu processo se encontra.
-            </p>
+      <section className="painel-superior">
+        <div className="perfil-resumo">
+          <div className="avatar">
+            {atleta.nome
+              .split(" ")
+              .filter(Boolean)
+              .slice(0, 2)
+              .map((nome: string) => nome[0])
+              .join("")
+              .toUpperCase()}
           </div>
 
-          <Status status={atleta.status} />
+          <div className="perfil-info">
+            <span className="rotulo">ATLETA</span>
 
+            <h2>{atleta.nome}</h2>
+
+            <div className="dados-esportivos">
+              <span>{atleta.modalidade || "Futebol"}</span>
+
+              <i />
+
+              <span>{atleta.posicao || "Posição não informada"}</span>
+
+              {atleta.numero_camisa && (
+                <>
+                  <i />
+                  <span>Camisa {atleta.numero_camisa}</span>
+                </>
+              )}
+            </div>
+          </div>
+
+          <Link
+            href="/portal-atleta/dados"
+            className="editar"
+          >
+            Meus dados
+          </Link>
         </div>
 
-        <div className="mt-7 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <div className="progresso-box">
+          <div className="progresso-topo">
+            <div>
+              <span>PROGRESSO CADASTRAL</span>
+              <strong>{progresso}%</strong>
+            </div>
 
-          <Etapa
-            numero="1"
-            titulo="Cadastro"
-            concluido
-          />
+            <small>
+              {etapasConcluidas} de 4 etapas
+            </small>
+          </div>
 
-          <Etapa
-            numero="2"
-            titulo="Documentos"
-            concluido={
-              documentosEnviados === 3
-            }
-          />
+          <div className="barra">
+            <div
+              className="barra-preenchida"
+              style={{
+                width: `${progresso}%`,
+              }}
+            />
+          </div>
 
-          <Etapa
-            numero="3"
-            titulo="Aprovação"
-            concluido={[
-              "aprovado",
-              "vinculado",
-              "termo_liberado",
-              "ativo",
-            ].includes(atleta.status)}
-          />
+          <div className="etapas">
+            <div className={cadastroCompleto ? "ok" : ""}>
+              <b>1</b>
+              <span>Cadastro</span>
+            </div>
 
-          <Etapa
-            numero="4"
-            titulo="Vínculo"
-            concluido={Boolean(vinculo)}
-          />
+            <div className={docsCompletos ? "ok" : ""}>
+              <b>2</b>
+              <span>Documentos</span>
+            </div>
 
-          <Etapa
-            numero="5"
-            titulo="Termo"
-            concluido={
-              termo?.status ===
-              "assinado"
-            }
-          />
+            <div className={possuiVinculo ? "ok" : ""}>
+              <b>3</b>
+              <span>Vínculo</span>
+            </div>
 
+            <div className={termoAssinado ? "ok" : ""}>
+              <b>4</b>
+              <span>Termo</span>
+            </div>
+          </div>
         </div>
-
       </section>
 
-      <section className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-
-        <Atalho
-          href="/portal-atleta/dados"
-          titulo="Meus Dados"
-          descricao="Consulte e mantenha seus dados atualizados."
-        />
-
-        <Atalho
+      <section className="indicadores">
+        <Link
           href="/portal-atleta/documentos"
-          titulo="Documentos"
-          descricao="Acompanhe o envio e análise documental."
-        />
+          className="indicador"
+        >
+          <div className="icone documento">
+            DOC
+          </div>
 
-        <Atalho
+          <div>
+            <span>Documentos</span>
+
+            <strong>
+              {documentosEnviados} de 4
+            </strong>
+
+            <small>
+              {documentosAprovados} aprovado
+              {documentosAprovados === 1 ? "" : "s"}
+            </small>
+          </div>
+        </Link>
+
+        <Link
           href="/portal-atleta/termo"
-          titulo="Termo de Compromisso"
-          descricao="Consulte ou assine seu termo."
-        />
+          className="indicador"
+        >
+          <div className="icone termo">
+            TER
+          </div>
 
-        <Atalho
-          href="/portal-atleta/historico"
-          titulo="Histórico"
-          descricao="Acompanhe as etapas já concluídas."
-        />
+          <div>
+            <span>Termo</span>
 
-        <Atalho
+            <strong>
+              {termo
+                ? rotuloStatus(termo.status)
+                : "Aguardando"}
+            </strong>
+
+            <small>
+              Termo de compromisso
+            </small>
+          </div>
+        </Link>
+
+        <Link
+          href="/portal-atleta/desempenho"
+          className="indicador"
+        >
+          <div className="icone desempenho">
+            EST
+          </div>
+
+          <div>
+            <span>Desempenho</span>
+
+            <strong>Estatísticas</strong>
+
+            <small>
+              Jogos, gols e participação
+            </small>
+          </div>
+        </Link>
+
+        <Link
           href="/portal-atleta/notificacoes"
-          titulo="Notificações"
-          descricao={
-            notificacoesNaoLidas
-              ? `${notificacoesNaoLidas} notificação(ões) não lida(s).`
-              : "Nenhuma nova notificação."
-          }
-        />
+          className="indicador"
+        >
+          <div className="icone notificacao">
+            NOT
+          </div>
 
+          <div>
+            <span>Notificações</span>
+
+            <strong>{notificacoesNaoLidas}</strong>
+
+            <small>
+              não lida
+              {notificacoesNaoLidas === 1 ? "" : "s"}
+            </small>
+          </div>
+        </Link>
       </section>
 
-    </div>
+      <section className="conteudo">
+        <div className="proxima-acao">
+          <div className="titulo-card">
+            <div>
+              <span>PRÓXIMO PASSO</span>
+              <h3>{proximaAcao.titulo}</h3>
+            </div>
+          </div>
+
+          <p>{proximaAcao.descricao}</p>
+
+          <Link
+            href={proximaAcao.href}
+            className="botao-principal"
+          >
+            {proximaAcao.botao}
+          </Link>
+        </div>
+
+        <div className="situacao">
+          <div className="titulo-card">
+            <div>
+              <span>SITUAÇÃO ATUAL</span>
+              <h3>Cadastro esportivo</h3>
+            </div>
+          </div>
+
+          <div className="linha-situacao">
+            <span>Documentação</span>
+
+            <strong>
+              {temCorrecao
+                ? "Correção solicitada"
+                : documentosAprovados === 4
+                ? "Aprovada"
+                : docsCompletos
+                ? "Em análise"
+                : "Pendente"}
+            </strong>
+          </div>
+
+          <div className="linha-situacao">
+            <span>Vínculo esportivo</span>
+
+            <strong>
+              {vinculo
+                ? `${vinculo.modalidade} • ${vinculo.temporada}`
+                : "Aguardando"}
+            </strong>
+          </div>
+
+          <div className="linha-situacao">
+            <span>Termo de compromisso</span>
+
+            <strong>
+              {termo
+                ? rotuloStatus(termo.status)
+                : "Não gerado"}
+            </strong>
+          </div>
+
+          <div className="linha-situacao">
+            <span>Status do atleta</span>
+
+            <strong className="destaque-status">
+              {rotuloStatus(atleta.status)}
+            </strong>
+          </div>
+        </div>
+      </section>
+
+      <section className="atalhos">
+        <Link href="/portal-atleta/dados">
+          <strong>Meus Dados</strong>
+          <span>Consulte e mantenha seus dados atualizados.</span>
+        </Link>
+
+        <Link href="/portal-atleta/documentos">
+          <strong>Documentos</strong>
+          <span>Envie e acompanhe a análise dos documentos.</span>
+        </Link>
+
+        <Link href="/portal-atleta/historico">
+          <strong>Histórico</strong>
+          <span>Acompanhe as movimentações do seu cadastro.</span>
+        </Link>
+
+        <Link href="/portal-atleta/notificacoes">
+          <strong>Notificações</strong>
+          <span>Veja os comunicados enviados pela associação.</span>
+        </Link>
+      </section>
+
+      <style>{`
+        .pagina {
+          max-width: 1650px;
+          margin: 0 auto;
+          padding: 22px 30px 36px;
+        }
+
+        .boas-vindas {
+          display: flex;
+          align-items: flex-end;
+          justify-content: space-between;
+          gap: 24px;
+          margin-bottom: 16px;
+        }
+
+        .secao {
+          color: #1763d6;
+          font-size: 11px;
+          font-weight: 900;
+          letter-spacing: .09em;
+        }
+
+        .boas-vindas h1 {
+          margin: 3px 0 3px;
+          color: #082e69;
+          font-size: 30px;
+          line-height: 1.1;
+        }
+
+        .boas-vindas p {
+          margin: 0;
+          color: #64748b;
+          font-size: 13px;
+        }
+
+        .status-geral {
+          min-width: 180px;
+          padding: 11px 15px;
+          border: 1px solid #cfe0f4;
+          border-radius: 12px;
+          background: #eef5ff;
+        }
+
+        .status-geral span {
+          display: block;
+          color: #1763d6;
+          font-size: 9px;
+          font-weight: 900;
+          letter-spacing: .07em;
+        }
+
+        .status-geral strong {
+          display: block;
+          margin-top: 3px;
+          color: #082e69;
+          font-size: 15px;
+        }
+
+        .status-ativo {
+          background: #eefbf3;
+          border-color: #c5ebd3;
+        }
+
+        .status-ativo span,
+        .status-ativo strong {
+          color: #087442;
+        }
+
+        .painel-superior {
+          display: grid;
+          grid-template-columns: 1.25fr .75fr;
+          gap: 13px;
+          margin-bottom: 13px;
+        }
+
+        .perfil-resumo,
+        .progresso-box {
+          background: #ffffff;
+          border: 1px solid #dce5f0;
+          border-radius: 14px;
+        }
+
+        .perfil-resumo {
+          min-height: 118px;
+          display: flex;
+          align-items: center;
+          gap: 15px;
+          padding: 16px 18px;
+        }
+
+        .avatar {
+          flex: 0 0 62px;
+          width: 62px;
+          height: 62px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(
+            135deg,
+            #0a3978,
+            #1763d6
+          );
+          color: #ffffff;
+          font-size: 20px;
+          font-weight: 900;
+        }
+
+        .perfil-info {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .rotulo {
+          color: #168447;
+          font-size: 9px;
+          font-weight: 900;
+          letter-spacing: .08em;
+        }
+
+        .perfil-info h2 {
+          margin: 2px 0 5px;
+          color: #082e69;
+          font-size: 21px;
+        }
+
+        .dados-esportivos {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 6px;
+          color: #64748b;
+          font-size: 11px;
+        }
+
+        .dados-esportivos i {
+          width: 3px;
+          height: 3px;
+          border-radius: 50%;
+          background: #94a3b8;
+        }
+
+        .editar {
+          flex: 0 0 auto;
+          padding: 9px 13px;
+          border: 1px solid #cbd8e8;
+          border-radius: 9px;
+          color: #082e69;
+          background: #ffffff;
+          text-decoration: none;
+          font-size: 11px;
+          font-weight: 800;
+        }
+
+        .progresso-box {
+          padding: 16px 18px;
+        }
+
+        .progresso-topo {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 10px;
+        }
+
+        .progresso-topo span {
+          display: block;
+          color: #64748b;
+          font-size: 9px;
+          font-weight: 900;
+          letter-spacing: .06em;
+        }
+
+        .progresso-topo strong {
+          display: block;
+          margin-top: 2px;
+          color: #082e69;
+          font-size: 23px;
+        }
+
+        .progresso-topo small {
+          color: #94a3b8;
+          font-size: 9px;
+        }
+
+        .barra {
+          width: 100%;
+          height: 7px;
+          margin: 9px 0 12px;
+          overflow: hidden;
+          border-radius: 999px;
+          background: #edf1f6;
+        }
+
+        .barra-preenchida {
+          height: 100%;
+          border-radius: 999px;
+          background: linear-gradient(
+            90deg,
+            #1763d6,
+            #168447
+          );
+        }
+
+        .etapas {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 5px;
+        }
+
+        .etapas div {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          color: #94a3b8;
+          font-size: 8.5px;
+          font-weight: 700;
+        }
+
+        .etapas b {
+          width: 18px;
+          height: 18px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          background: #eef2f7;
+          color: #94a3b8;
+          font-size: 8px;
+        }
+
+        .etapas .ok {
+          color: #168447;
+        }
+
+        .etapas .ok b {
+          background: #e7f7ee;
+          color: #168447;
+        }
+
+        .indicadores {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 12px;
+          margin-bottom: 13px;
+        }
+
+        .indicador {
+          min-height: 88px;
+          padding: 13px 15px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          background: #ffffff;
+          border: 1px solid #dce5f0;
+          border-radius: 13px;
+          text-decoration: none;
+        }
+
+        .indicador:hover {
+          border-color: #afc2d9;
+        }
+
+        .icone {
+          flex: 0 0 38px;
+          width: 38px;
+          height: 38px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 10px;
+          font-size: 9px;
+          font-weight: 900;
+        }
+
+        .documento {
+          background: #eaf2ff;
+          color: #1763d6;
+        }
+
+        .termo {
+          background: #edf8f1;
+          color: #168447;
+        }
+
+        .desempenho {
+          background: #f5f0ff;
+          color: #7142b8;
+        }
+
+        .notificacao {
+          background: #fff5e8;
+          color: #b96900;
+        }
+
+        .indicador span {
+          display: block;
+          color: #64748b;
+          font-size: 10px;
+        }
+
+        .indicador strong {
+          display: block;
+          margin-top: 2px;
+          color: #082e69;
+          font-size: 14px;
+        }
+
+        .indicador small {
+          display: block;
+          margin-top: 2px;
+          color: #94a3b8;
+          font-size: 9px;
+        }
+
+        .conteudo {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 13px;
+          margin-bottom: 13px;
+        }
+
+        .proxima-acao,
+        .situacao {
+          padding: 17px 18px;
+          background: #ffffff;
+          border: 1px solid #dce5f0;
+          border-radius: 14px;
+        }
+
+        .proxima-acao {
+          border-left: 4px solid #1763d6;
+        }
+
+        .titulo-card span {
+          color: #1763d6;
+          font-size: 9px;
+          font-weight: 900;
+          letter-spacing: .07em;
+        }
+
+        .titulo-card h3 {
+          margin: 2px 0 0;
+          color: #082e69;
+          font-size: 17px;
+        }
+
+        .proxima-acao p {
+          max-width: 620px;
+          margin: 9px 0 13px;
+          color: #64748b;
+          font-size: 11px;
+          line-height: 1.5;
+        }
+
+        .botao-principal {
+          display: inline-flex;
+          padding: 9px 13px;
+          border-radius: 9px;
+          background: #082e69;
+          color: #ffffff;
+          text-decoration: none;
+          font-size: 10px;
+          font-weight: 800;
+        }
+
+        .linha-situacao {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 8px 0;
+          border-bottom: 1px solid #eef2f7;
+          font-size: 10px;
+        }
+
+        .linha-situacao:last-child {
+          border-bottom: 0;
+        }
+
+        .linha-situacao span {
+          color: #64748b;
+        }
+
+        .linha-situacao strong {
+          color: #334155;
+          text-align: right;
+        }
+
+        .destaque-status {
+          color: #168447 !important;
+        }
+
+        .atalhos {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 10px;
+        }
+
+        .atalhos a {
+          padding: 13px 14px;
+          border: 1px solid #dce5f0;
+          border-radius: 12px;
+          background: #ffffff;
+          text-decoration: none;
+        }
+
+        .atalhos strong {
+          display: block;
+          color: #082e69;
+          font-size: 12px;
+        }
+
+        .atalhos span {
+          display: block;
+          margin-top: 3px;
+          color: #64748b;
+          font-size: 9px;
+          line-height: 1.4;
+        }
+
+        @media (max-width: 1050px) {
+          .painel-superior,
+          .conteudo {
+            grid-template-columns: 1fr;
+          }
+
+          .indicadores,
+          .atalhos {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+
+        @media (max-width: 700px) {
+          .pagina {
+            padding: 16px 14px 28px;
+          }
+
+          .boas-vindas {
+            align-items: flex-start;
+            flex-direction: column;
+          }
+
+          .boas-vindas h1 {
+            font-size: 25px;
+          }
+
+          .status-geral {
+            width: 100%;
+          }
+
+          .perfil-resumo {
+            align-items: flex-start;
+            flex-wrap: wrap;
+          }
+
+          .avatar {
+            flex-basis: 52px;
+            width: 52px;
+            height: 52px;
+            font-size: 17px;
+          }
+
+          .editar {
+            width: 100%;
+            text-align: center;
+          }
+
+          .etapas {
+            grid-template-columns: repeat(2, 1fr);
+            row-gap: 8px;
+          }
+
+          .indicadores,
+          .atalhos {
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+          }
+
+          .indicador {
+            min-height: 80px;
+            padding: 11px;
+          }
+        }
+      `}</style>
+    </main>
   );
-}
-
-function Card({
-  titulo,
-  valor,
-  descricao,
-}: {
-  titulo: string;
-  valor: string;
-  descricao: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6">
-
-      <p className="text-sm font-medium text-slate-500">
-        {titulo}
-      </p>
-
-      <p className="mt-2 text-2xl font-black text-[#08265a]">
-        {valor}
-      </p>
-
-      <p className="mt-2 text-xs text-slate-400">
-        {descricao}
-      </p>
-
-    </div>
-  );
-}
-
-function Etapa({
-  numero,
-  titulo,
-  concluido,
-}: {
-  numero: string;
-  titulo: string;
-  concluido: boolean;
-}) {
-  return (
-    <div
-      className={`rounded-xl border p-4 ${
-        concluido
-          ? "border-emerald-200 bg-emerald-50"
-          : "border-slate-200 bg-slate-50"
-      }`}
-    >
-      <div
-        className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${
-          concluido
-            ? "bg-emerald-600 text-white"
-            : "bg-slate-200 text-slate-500"
-        }`}
-      >
-        {concluido ? "✓" : numero}
-      </div>
-
-      <p className="mt-3 text-sm font-bold text-slate-700">
-        {titulo}
-      </p>
-
-    </div>
-  );
-}
-
-function Atalho({
-  href,
-  titulo,
-  descricao,
-}: {
-  href: string;
-  titulo: string;
-  descricao: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="rounded-2xl border border-slate-200 bg-white p-6 transition hover:border-blue-200 hover:shadow-sm"
-    >
-      <h3 className="font-bold text-[#08265a]">
-        {titulo}
-      </h3>
-
-      <p className="mt-2 text-sm leading-6 text-slate-500">
-        {descricao}
-      </p>
-
-      <p className="mt-4 text-sm font-bold text-blue-700">
-        Acessar →
-      </p>
-    </Link>
-  );
-}
-
-function Status({
-  status,
-}: {
-  status: string;
-}) {
-  return (
-    <span className="rounded-full bg-blue-100 px-4 py-2 text-sm font-bold text-blue-700">
-      {nomeStatus(status)}
-    </span>
-  );
-}
-
-function nomeStatus(status: string) {
-  const mapa: Record<string, string> = {
-    pre_cadastro: "Pré-cadastro",
-    documentos_enviados:
-      "Documentos enviados",
-    em_analise: "Em análise",
-    correcao_solicitada:
-      "Correção solicitada",
-    aprovado: "Aprovado",
-    vinculado: "Vinculado",
-    termo_liberado:
-      "Termo liberado",
-    ativo: "Ativo",
-    inativo: "Inativo",
-  };
-
-  return mapa[status] || status;
-}
-
-function nomeStatusTermo(status: string) {
-  const mapa: Record<string, string> = {
-    rascunho: "Rascunho",
-    gerado: "Gerado",
-    aguardando_assinatura:
-      "Aguardando assinatura",
-    assinado: "Assinado",
-    cancelado: "Cancelado",
-  };
-
-  return mapa[status] || status;
-}
-
-function nomeStatusVinculo(status: string) {
-  return status === "ativo"
-    ? "Ativo"
-    : status;
-}
-
-function primeiroNome(nome: string) {
-  return nome.trim().split(/\s+/)[0];
-}
-
-function formatarData(data: string) {
-  return new Intl.DateTimeFormat(
-    "pt-BR"
-  ).format(new Date(data));
 }

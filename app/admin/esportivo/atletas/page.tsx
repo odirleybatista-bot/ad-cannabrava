@@ -5,419 +5,935 @@ type Atleta = {
   id: string;
   nome: string;
   apelido: string | null;
-  modalidade: string | null;
   posicao: string | null;
-  data_nascimento: string | null;
-  status: string;
-  criado_em: string;
+  modalidade: string | null;
+  status: string | null;
+  numero_camisa: string | number | null;
+  criado_em: string | null;
 };
 
-export default async function AtletasPage() {
+function statusLabel(status: string | null) {
+  const mapa: Record<string, string> = {
+    pre_cadastro: "Pré-cadastro",
+    documentos_enviados: "Documentos enviados",
+    em_analise: "Em análise",
+    aprovado: "Aprovado",
+    vinculado: "Vinculado",
+    termo_liberado: "Termo liberado",
+    ativo: "Ativo",
+    suspenso: "Suspenso",
+    inativo: "Inativo",
+  };
+
+  return mapa[status || ""] || status || "Pendente";
+}
+
+export default async function AtletasPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    busca?: string;
+    status?: string;
+    posicao?: string;
+  }>;
+}) {
+  const filtros = await searchParams;
+
+  const busca = filtros.busca?.trim() || "";
+  const status = filtros.status || "";
+  const posicao = filtros.posicao || "";
+
   const supabase = await createClient();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("atletas")
     .select(`
       id,
       nome,
       apelido,
-      modalidade,
       posicao,
-      data_nascimento,
+      modalidade,
       status,
+      numero_camisa,
       criado_em
     `)
-    .order("criado_em", {
-      ascending: false,
+    .order("nome", {
+      ascending: true,
     });
 
-  const atletas: Atleta[] = data ?? [];
+  if (busca) {
+    query = query.or(
+      `nome.ilike.%${busca}%,apelido.ilike.%${busca}%`
+    );
+  }
 
-  const total = atletas.length;
+  if (status) {
+    query = query.eq("status", status);
+  }
 
-  const preCadastro = atletas.filter(
-    (atleta) => atleta.status === "pre_cadastro"
+  if (posicao) {
+    query = query.eq("posicao", posicao);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Erro ao carregar atletas:", {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+    });
+  }
+
+  const atletas = (data || []) as Atleta[];
+
+  const { data: todos } = await supabase
+    .from("atletas")
+    .select("id,status");
+
+  const lista = todos || [];
+
+  const total = lista.length;
+
+  const ativos = lista.filter(
+    (item) => item.status === "ativo"
   ).length;
 
-  const emAnalise = atletas.filter(
-    (atleta) => atleta.status === "em_analise"
+  const emAnalise = lista.filter(
+    (item) =>
+      item.status === "em_analise" ||
+      item.status === "documentos_enviados"
   ).length;
 
-  const ativos = atletas.filter(
-    (atleta) => atleta.status === "ativo"
+  const aguardandoVinculo = lista.filter(
+    (item) =>
+      item.status === "aprovado"
   ).length;
+
+  const { count: documentosPendentes } =
+    await supabase
+      .from("atleta_documentos")
+      .select("id", {
+        count: "exact",
+        head: true,
+      })
+      .in("status", [
+        "enviado",
+        "em_analise",
+        "correcao_solicitada",
+      ]);
 
   return (
-    <div>
-
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-
+    <main className="pagina">
+      <section className="topo">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">
-            Gestão Esportiva
-          </p>
+          <span className="secao">
+            GESTÃO ESPORTIVA
+          </span>
 
-          <h1 className="mt-1 text-3xl font-black text-[#08265a]">
-            Atletas
-          </h1>
+          <h1>Atletas</h1>
 
-          <p className="mt-1 text-slate-500">
-            Gerencie os cadastros recebidos pelo Portal do Atleta.
+          <p>
+            Acompanhe cadastros, documentos,
+            vínculos e situação esportiva.
           </p>
         </div>
 
         <Link
-          href="/portal-atleta/dados"
-          className="flex h-12 items-center rounded-xl bg-[#08265a] px-6 text-sm font-bold text-white transition hover:bg-[#0b3478]"
+          href="/admin/esportivo/atletas/novo"
+          className="novo"
         >
-          + Novo cadastro
+          + Novo atleta
         </Link>
-
-      </div>
-
-      {error && (
-        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-medium text-red-700">
-          Não foi possível carregar os atletas: {error.message}
-        </div>
-      )}
-
-      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-
-        <Indicador
-          titulo="Total de atletas"
-          valor={String(total)}
-          descricao="Cadastros registrados"
-        />
-
-        <Indicador
-          titulo="Pré-cadastros"
-          valor={String(preCadastro)}
-          descricao="Aguardando continuidade"
-        />
-
-        <Indicador
-          titulo="Em análise"
-          valor={String(emAnalise)}
-          descricao="Aguardando conferência"
-        />
-
-        <Indicador
-          titulo="Ativos"
-          valor={String(ativos)}
-          descricao="Vínculos ativos"
-        />
-
-      </div>
-
-      <section className="mt-7 rounded-2xl border border-slate-200 bg-white p-5">
-
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-
-          <input
-            type="search"
-            placeholder="Buscar atleta..."
-            className="h-11 rounded-xl border border-slate-300 px-4 text-sm outline-none focus:border-blue-600"
-          />
-
-          <select
-            defaultValue=""
-            className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm outline-none focus:border-blue-600"
-          >
-            <option value="">Todas as modalidades</option>
-            <option value="Futebol">Futebol</option>
-          </select>
-
-          <select
-            defaultValue=""
-            className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm outline-none focus:border-blue-600"
-          >
-            <option value="">Todos os status</option>
-            <option value="pre_cadastro">Pré-cadastro</option>
-            <option value="em_analise">Em análise</option>
-            <option value="aprovado">Aprovado</option>
-            <option value="ativo">Ativo</option>
-            <option value="inativo">Inativo</option>
-          </select>
-
-          <button
-            type="button"
-            className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
-          >
-            Filtrar
-          </button>
-
-        </div>
-
       </section>
 
-      <section className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white">
-
-        <div className="border-b border-slate-200 px-6 py-5">
-          <h2 className="font-bold text-[#08265a]">
-            Atletas cadastrados
-          </h2>
-
-          <p className="mt-1 text-sm text-slate-500">
-            Cadastros registrados no banco de dados.
-          </p>
+      <section className="indicadores">
+        <div className="indicador">
+          <span>TOTAL</span>
+          <strong>{total}</strong>
+          <small>cadastrados</small>
         </div>
+
+        <div className="indicador ativo-card">
+          <span>ATIVOS</span>
+          <strong>{ativos}</strong>
+          <small>em atividade</small>
+        </div>
+
+        <div className="indicador">
+          <span>EM ANÁLISE</span>
+          <strong>{emAnalise}</strong>
+          <small>cadastros pendentes</small>
+        </div>
+
+        <div className="indicador">
+          <span>AGUARDANDO VÍNCULO</span>
+          <strong>{aguardandoVinculo}</strong>
+          <small>já aprovados</small>
+        </div>
+
+        <div className="indicador alerta-card">
+          <span>DOCUMENTOS</span>
+          <strong>{documentosPendentes || 0}</strong>
+          <small>requerem atenção</small>
+        </div>
+      </section>
+
+      <section className="painel">
+        <div className="painel-topo">
+          <div>
+            <span className="label">
+              CADASTROS
+            </span>
+
+            <h2>Lista de atletas</h2>
+          </div>
+
+          <div className="contador">
+            {atletas.length}
+          </div>
+        </div>
+
+        <form className="filtros">
+          <div className="campo busca">
+            <label htmlFor="busca">
+              Buscar
+            </label>
+
+            <input
+              id="busca"
+              name="busca"
+              defaultValue={busca}
+              placeholder="Nome ou apelido"
+            />
+          </div>
+
+          <div className="campo">
+            <label htmlFor="status">
+              Situação
+            </label>
+
+            <select
+              id="status"
+              name="status"
+              defaultValue={status}
+            >
+              <option value="">Todas</option>
+              <option value="pre_cadastro">
+                Pré-cadastro
+              </option>
+              <option value="documentos_enviados">
+                Documentos enviados
+              </option>
+              <option value="em_analise">
+                Em análise
+              </option>
+              <option value="aprovado">
+                Aprovado
+              </option>
+              <option value="vinculado">
+                Vinculado
+              </option>
+              <option value="ativo">
+                Ativo
+              </option>
+              <option value="suspenso">
+                Suspenso
+              </option>
+              <option value="inativo">
+                Inativo
+              </option>
+            </select>
+          </div>
+
+          <div className="campo">
+            <label htmlFor="posicao">
+              Posição
+            </label>
+
+            <select
+              id="posicao"
+              name="posicao"
+              defaultValue={posicao}
+            >
+              <option value="">Todas</option>
+              <option value="Goleiro">Goleiro</option>
+              <option value="Zagueiro">Zagueiro</option>
+              <option value="Lateral Direito">
+                Lateral Direito
+              </option>
+              <option value="Lateral Esquerdo">
+                Lateral Esquerdo
+              </option>
+              <option value="Volante">Volante</option>
+              <option value="Meia">Meia</option>
+              <option value="Atacante">Atacante</option>
+            </select>
+          </div>
+
+          <div className="acoes-filtro">
+            <button type="submit">
+              Filtrar
+            </button>
+
+            <Link href="/admin/esportivo/atletas">
+              Limpar
+            </Link>
+          </div>
+        </form>
 
         {atletas.length === 0 ? (
+          <div className="vazio">
+            <div className="vazio-icone">
+              AT
+            </div>
 
-          <div className="p-12 text-center">
-            <p className="font-semibold text-slate-600">
-              Nenhum atleta cadastrado
-            </p>
+            <h3>Nenhum atleta encontrado</h3>
 
-            <p className="mt-2 text-sm text-slate-400">
-              Os cadastros realizados pelo Portal do Atleta aparecerão aqui.
+            <p>
+              Cadastre um novo atleta ou altere os filtros.
             </p>
           </div>
-
         ) : (
+          <>
+            <div className="desktop-lista">
+              <div className="linha cabecalho-tabela">
+                <span>ATLETA</span>
+                <span>POSIÇÃO</span>
+                <span>CAMISA</span>
+                <span>MODALIDADE</span>
+                <span>SITUAÇÃO</span>
+                <span />
+              </div>
 
-          <div className="overflow-x-auto">
+              {atletas.map((atleta) => (
+                <Link
+                  key={atleta.id}
+                  href={`/admin/esportivo/atletas/${atleta.id}`}
+                  className="linha linha-atleta"
+                >
+                  <div className="atleta">
+                    <div className="avatar">
+                      {atleta.nome
+                        .split(" ")
+                        .filter(Boolean)
+                        .slice(0, 2)
+                        .map((parte: string) => parte[0])
+                        .join("")
+                        .toUpperCase()}
+                    </div>
 
-            <table className="w-full min-w-[900px]">
+                    <div className="dados-atleta">
+                      <strong>
+                        {atleta.nome}
+                      </strong>
 
-              <thead className="bg-slate-50">
-                <tr className="text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                      <small>
+                        {atleta.apelido || "Sem apelido"}
+                      </small>
+                    </div>
+                  </div>
 
-                  <th className="px-6 py-4">
-                    Atleta
-                  </th>
+                  <span>
+                    {atleta.posicao || "—"}
+                  </span>
 
-                  <th className="px-6 py-4">
-                    Modalidade
-                  </th>
+                  <span className="camisa">
+                    {atleta.numero_camisa || "—"}
+                  </span>
 
-                  <th className="px-6 py-4">
-                    Posição
-                  </th>
+                  <span>
+                    {atleta.modalidade || "Futebol"}
+                  </span>
 
-                  <th className="px-6 py-4">
-                    Idade
-                  </th>
-
-                  <th className="px-6 py-4">
-                    Situação
-                  </th>
-
-                  <th className="px-6 py-4">
-                    Cadastro
-                  </th>
-
-                  <th className="px-6 py-4 text-right">
-                    Ações
-                  </th>
-
-                </tr>
-              </thead>
-
-              <tbody className="divide-y divide-slate-100">
-
-                {atletas.map((atleta) => (
-
-                  <tr
-                    key={atleta.id}
-                    className="transition hover:bg-slate-50"
+                  <span
+                    className={`status status-${atleta.status}`}
                   >
+                    {statusLabel(atleta.status)}
+                  </span>
 
-                    <td className="px-6 py-4">
+                  <span className="seta">
+                    ›
+                  </span>
+                </Link>
+              ))}
+            </div>
 
-                      <div className="flex items-center gap-3">
-
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#08265a] text-xs font-bold text-white">
-                          {iniciais(atleta.nome)}
-                        </div>
-
-                        <div>
-                          <p className="font-bold text-slate-800">
-                            {atleta.nome}
-                          </p>
-
-                          {atleta.apelido && (
-                            <p className="text-xs text-slate-400">
-                              {atleta.apelido}
-                            </p>
-                          )}
-                        </div>
-
+            <div className="mobile-lista">
+              {atletas.map((atleta) => (
+                <Link
+                  key={atleta.id}
+                  href={`/admin/esportivo/atletas/${atleta.id}`}
+                  className="mobile-card"
+                >
+                  <div className="mobile-topo">
+                    <div className="atleta">
+                      <div className="avatar">
+                        {atleta.nome
+                          .split(" ")
+                          .filter(Boolean)
+                          .slice(0, 2)
+                          .map((parte: string) => parte[0])
+                          .join("")
+                          .toUpperCase()}
                       </div>
 
-                    </td>
+                      <div className="dados-atleta">
+                        <strong>
+                          {atleta.nome}
+                        </strong>
 
-                    <td className="px-6 py-4 text-sm text-slate-600">
-                      {atleta.modalidade || "Não informada"}
-                    </td>
+                        <small>
+                          {atleta.apelido || "Atleta"}
+                        </small>
+                      </div>
+                    </div>
 
-                    <td className="px-6 py-4 text-sm text-slate-600">
-                      {atleta.posicao || "Não informada"}
-                    </td>
+                    <span
+                      className={`status status-${atleta.status}`}
+                    >
+                      {statusLabel(atleta.status)}
+                    </span>
+                  </div>
 
-                    <td className="px-6 py-4 text-sm text-slate-600">
-                      {calcularIdade(atleta.data_nascimento)}
-                    </td>
+                  <div className="mobile-info">
+                    <div>
+                      <span>POSIÇÃO</span>
+                      <strong>
+                        {atleta.posicao || "—"}
+                      </strong>
+                    </div>
 
-                    <td className="px-6 py-4">
-                      <Status status={atleta.status} />
-                    </td>
+                    <div>
+                      <span>CAMISA</span>
+                      <strong>
+                        {atleta.numero_camisa || "—"}
+                      </strong>
+                    </div>
 
-                    <td className="px-6 py-4 text-sm text-slate-500">
-                      {formatarData(atleta.criado_em)}
-                    </td>
-
-                    <td className="px-6 py-4 text-right">
-
-                      <Link
-                        href={`/admin/esportivo/atletas/${atleta.id}`}
-                        className="inline-flex h-9 items-center rounded-lg border border-blue-200 bg-blue-50 px-4 text-sm font-bold text-blue-700 transition hover:bg-blue-100"
-                      >
-                        Visualizar
-                      </Link>
-
-                    </td>
-
-                  </tr>
-
-                ))}
-
-              </tbody>
-
-            </table>
-
-          </div>
-
+                    <div>
+                      <span>MODALIDADE</span>
+                      <strong>
+                        {atleta.modalidade || "Futebol"}
+                      </strong>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </>
         )}
-
       </section>
 
-    </div>
+      <style>{`
+        .pagina {
+          width: 100%;
+          max-width: 1900px;
+          margin: 0 auto;
+          padding: 22px 26px 38px;
+        }
+
+        .topo {
+          display: flex;
+          align-items: flex-end;
+          justify-content: space-between;
+          gap: 18px;
+          margin-bottom: 16px;
+        }
+
+        .secao {
+          color: #168447;
+          font-size: 8px;
+          font-weight: 900;
+          letter-spacing: .09em;
+        }
+
+        .topo h1 {
+          margin: 3px 0;
+          color: #082e69;
+          font-size: 28px;
+        }
+
+        .topo p {
+          margin: 0;
+          color: #64748b;
+          font-size: 10px;
+        }
+
+        .novo {
+          min-height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0 15px;
+          border-radius: 9px;
+          background: #082e69;
+          color: white;
+          font-size: 9px;
+          font-weight: 900;
+          text-decoration: none;
+        }
+
+        .indicadores {
+          display: grid;
+          grid-template-columns:
+            repeat(5, minmax(0, 1fr));
+          gap: 9px;
+          margin-bottom: 11px;
+        }
+
+        .indicador {
+          min-height: 88px;
+          padding: 12px 14px;
+          border: 1px solid #dce5f0;
+          border-radius: 11px;
+          background: #ffffff;
+        }
+
+        .indicador span {
+          display: block;
+          color: #64748b;
+          font-size: 7px;
+          font-weight: 900;
+          letter-spacing: .06em;
+        }
+
+        .indicador strong {
+          display: block;
+          margin-top: 7px;
+          color: #082e69;
+          font-size: 21px;
+        }
+
+        .indicador small {
+          display: block;
+          margin-top: 3px;
+          color: #94a3b8;
+          font-size: 8px;
+        }
+
+        .ativo-card {
+          border-left: 3px solid #168447;
+        }
+
+        .alerta-card {
+          border-left: 3px solid #d97706;
+        }
+
+        .painel {
+          overflow: hidden;
+          border: 1px solid #dce5f0;
+          border-radius: 12px;
+          background: white;
+        }
+
+        .painel-topo {
+          min-height: 60px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 11px 15px;
+          border-bottom: 1px solid #edf1f5;
+        }
+
+        .label {
+          color: #168447;
+          font-size: 7px;
+          font-weight: 900;
+          letter-spacing: .08em;
+        }
+
+        .painel-topo h2 {
+          margin: 2px 0 0;
+          color: #082e69;
+          font-size: 15px;
+        }
+
+        .contador {
+          min-width: 28px;
+          height: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          background: #eef5ff;
+          color: #1763d6;
+          font-size: 9px;
+          font-weight: 900;
+        }
+
+        .filtros {
+          display: grid;
+          grid-template-columns:
+            minmax(240px, 1fr)
+            180px
+            180px
+            auto;
+          gap: 8px;
+          align-items: end;
+          padding: 11px 15px;
+          background: #f8fafc;
+          border-bottom: 1px solid #edf1f5;
+        }
+
+        .campo label {
+          display: block;
+          margin-bottom: 4px;
+          color: #64748b;
+          font-size: 7px;
+          font-weight: 900;
+        }
+
+        .campo input,
+        .campo select {
+          width: 100%;
+          height: 36px;
+          padding: 0 9px;
+          border: 1px solid #d6e0eb;
+          border-radius: 8px;
+          background: white;
+          color: #334155;
+          font-size: 9px;
+          outline: 0;
+        }
+
+        .acoes-filtro {
+          display: flex;
+          gap: 6px;
+        }
+
+        .acoes-filtro button,
+        .acoes-filtro a {
+          min-height: 36px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0 11px;
+          border-radius: 8px;
+          font-size: 8px;
+          font-weight: 900;
+          text-decoration: none;
+        }
+
+        .acoes-filtro button {
+          border: 0;
+          background: #082e69;
+          color: white;
+          cursor: pointer;
+        }
+
+        .acoes-filtro a {
+          border: 1px solid #d6e0eb;
+          background: white;
+          color: #64748b;
+        }
+
+        .linha {
+          display: grid;
+          grid-template-columns:
+            minmax(280px, 1.7fr)
+            minmax(110px, .8fr)
+            70px
+            minmax(110px, .8fr)
+            135px
+            20px;
+          gap: 10px;
+          align-items: center;
+        }
+
+        .cabecalho-tabela {
+          min-height: 32px;
+          padding: 0 15px;
+          background: #fbfcfd;
+          color: #8795a8;
+          font-size: 6.5px;
+          font-weight: 900;
+          letter-spacing: .04em;
+        }
+
+        .linha-atleta {
+          min-height: 58px;
+          padding: 8px 15px;
+          border-top: 1px solid #edf1f5;
+          color: #536178;
+          font-size: 9px;
+          text-decoration: none;
+        }
+
+        .linha-atleta:hover {
+          background: #fbfcfe;
+        }
+
+        .atleta {
+          min-width: 0;
+          display: flex;
+          align-items: center;
+          gap: 9px;
+        }
+
+        .avatar {
+          flex: 0 0 34px;
+          width: 34px;
+          height: 34px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          background: #eaf2ff;
+          color: #1763d6;
+          font-size: 8px;
+          font-weight: 900;
+        }
+
+        .dados-atleta {
+          min-width: 0;
+        }
+
+        .dados-atleta strong {
+          display: block;
+          overflow: hidden;
+          color: #082e69;
+          font-size: 10px;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .dados-atleta small {
+          display: block;
+          margin-top: 2px;
+          color: #94a3b8;
+          font-size: 7px;
+        }
+
+        .camisa {
+          color: #082e69;
+          font-weight: 900;
+        }
+
+        .status {
+          width: fit-content;
+          padding: 5px 8px;
+          border-radius: 999px;
+          background: #f1f5f9;
+          color: #64748b;
+          font-size: 7px;
+          font-weight: 900;
+          white-space: nowrap;
+        }
+
+        .status-ativo {
+          background: #e7f7ee;
+          color: #168447;
+        }
+
+        .status-aprovado,
+        .status-vinculado {
+          background: #eaf2ff;
+          color: #1763d6;
+        }
+
+        .status-em_analise,
+        .status-documentos_enviados {
+          background: #fff5e8;
+          color: #b96900;
+        }
+
+        .status-suspenso {
+          background: #fff1e8;
+          color: #c05b00;
+        }
+
+        .status-inativo {
+          background: #f1f5f9;
+          color: #64748b;
+        }
+
+        .seta {
+          color: #94a3b8;
+          font-size: 17px;
+        }
+
+        .mobile-lista {
+          display: none;
+        }
+
+        .vazio {
+          padding: 50px 20px;
+          text-align: center;
+        }
+
+        .vazio-icone {
+          width: 45px;
+          height: 45px;
+          margin: 0 auto 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 11px;
+          background: #eef5ff;
+          color: #1763d6;
+          font-size: 9px;
+          font-weight: 900;
+        }
+
+        .vazio h3 {
+          margin: 0;
+          color: #082e69;
+          font-size: 13px;
+        }
+
+        .vazio p {
+          margin: 5px 0 0;
+          color: #94a3b8;
+          font-size: 8px;
+        }
+
+        @media (max-width: 1050px) {
+          .indicadores {
+            grid-template-columns:
+              repeat(3, minmax(0, 1fr));
+          }
+        }
+
+        @media (max-width: 850px) {
+          .desktop-lista {
+            display: none;
+          }
+
+          .mobile-lista {
+            display: block;
+          }
+
+          .filtros {
+            grid-template-columns: 1fr 1fr;
+          }
+
+          .mobile-card {
+            display: block;
+            padding: 12px 13px;
+            border-bottom: 1px solid #edf1f5;
+            color: inherit;
+            text-decoration: none;
+          }
+
+          .mobile-card:last-child {
+            border-bottom: 0;
+          }
+
+          .mobile-topo {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 9px;
+          }
+
+          .mobile-topo .atleta {
+            flex: 1;
+          }
+
+          .mobile-info {
+            display: grid;
+            grid-template-columns:
+              repeat(3, minmax(0, 1fr));
+            gap: 8px;
+            margin-top: 10px;
+            padding-top: 9px;
+            border-top: 1px solid #edf1f5;
+          }
+
+          .mobile-info span {
+            display: block;
+            color: #94a3b8;
+            font-size: 6px;
+            font-weight: 900;
+          }
+
+          .mobile-info strong {
+            display: block;
+            margin-top: 2px;
+            color: #334155;
+            font-size: 8px;
+          }
+        }
+
+        @media (max-width: 700px) {
+          .pagina {
+            padding: 15px 10px 28px;
+          }
+
+          .topo {
+            display: block;
+          }
+
+          .topo h1 {
+            font-size: 24px;
+          }
+
+          .topo p {
+            font-size: 9px;
+            line-height: 1.4;
+          }
+
+          .novo {
+            width: 100%;
+            min-height: 43px;
+            margin-top: 11px;
+          }
+
+          .indicadores {
+            grid-template-columns:
+              repeat(2, minmax(0, 1fr));
+            gap: 7px;
+          }
+
+          .indicador {
+            min-height: 82px;
+            padding: 10px;
+          }
+
+          .indicador strong {
+            margin-top: 6px;
+            font-size: 19px;
+          }
+
+          .filtros {
+            grid-template-columns: 1fr;
+            padding: 10px 11px;
+          }
+
+          .campo input,
+          .campo select {
+            height: 42px;
+            font-size: 10px;
+          }
+
+          .acoes-filtro {
+            width: 100%;
+          }
+
+          .acoes-filtro button,
+          .acoes-filtro a {
+            flex: 1;
+            min-height: 42px;
+          }
+        }
+
+        @media (max-width: 390px) {
+          .pagina {
+            padding-left: 8px;
+            padding-right: 8px;
+          }
+
+          .indicadores {
+            gap: 5px;
+          }
+
+          .mobile-info {
+            grid-template-columns: 1fr 1fr;
+          }
+        }
+      `}</style>
+    </main>
   );
-}
-
-function Indicador({
-  titulo,
-  valor,
-  descricao,
-}: {
-  titulo: string;
-  valor: string;
-  descricao: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6">
-
-      <p className="text-sm font-medium text-slate-500">
-        {titulo}
-      </p>
-
-      <p className="mt-2 text-3xl font-black text-[#08265a]">
-        {valor}
-      </p>
-
-      <p className="mt-2 text-xs text-slate-400">
-        {descricao}
-      </p>
-
-    </div>
-  );
-}
-
-function Status({
-  status,
-}: {
-  status: string;
-}) {
-  const configuracao: Record<
-    string,
-    {
-      texto: string;
-      classe: string;
-    }
-  > = {
-    pre_cadastro: {
-      texto: "Pré-cadastro",
-      classe: "bg-slate-100 text-slate-700",
-    },
-
-    documentos_enviados: {
-      texto: "Documentos enviados",
-      classe: "bg-blue-100 text-blue-700",
-    },
-
-    em_analise: {
-      texto: "Em análise",
-      classe: "bg-amber-100 text-amber-700",
-    },
-
-    aprovado: {
-      texto: "Aprovado",
-      classe: "bg-emerald-100 text-emerald-700",
-    },
-
-    ativo: {
-      texto: "Ativo",
-      classe: "bg-emerald-100 text-emerald-700",
-    },
-
-    inativo: {
-      texto: "Inativo",
-      classe: "bg-red-100 text-red-700",
-    },
-  };
-
-  const atual =
-    configuracao[status] || {
-      texto: status,
-      classe: "bg-slate-100 text-slate-600",
-    };
-
-  return (
-    <span
-      className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${atual.classe}`}
-    >
-      {atual.texto}
-    </span>
-  );
-}
-
-function iniciais(nome: string) {
-  return nome
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((parte) => parte.charAt(0).toUpperCase())
-    .join("");
-}
-
-function calcularIdade(dataNascimento: string | null) {
-  if (!dataNascimento) {
-    return "-";
-  }
-
-  const nascimento = new Date(`${dataNascimento}T00:00:00`);
-  const hoje = new Date();
-
-  let idade =
-    hoje.getFullYear() - nascimento.getFullYear();
-
-  const mes =
-    hoje.getMonth() - nascimento.getMonth();
-
-  if (
-    mes < 0 ||
-    (mes === 0 &&
-      hoje.getDate() < nascimento.getDate())
-  ) {
-    idade--;
-  }
-
-  return `${idade} anos`;
-}
-
-function formatarData(data: string) {
-  const valor = new Date(data);
-
-  return new Intl.DateTimeFormat("pt-BR").format(valor);
 }

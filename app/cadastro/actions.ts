@@ -24,11 +24,16 @@ export async function criarAcesso(
     formData.get("confirmar_senha") || ""
   );
 
-  if (!nome || !email || !senha) {
+  if (
+    !nome ||
+    !email ||
+    !senha ||
+    !confirmarSenha
+  ) {
     return {
       sucesso: false,
       mensagem:
-        "Preencha nome, e-mail e senha.",
+        "Preencha todos os campos obrigatórios.",
     };
   }
 
@@ -54,17 +59,22 @@ export async function criarAcesso(
   const {
     data,
     error,
-  } = await supabase.auth.signUp({
-    email,
-    password: senha,
+  } =
+    await supabase.auth.signUp({
+      email,
+      password: senha,
 
-    options: {
-      data: {
-        nome,
-        perfil_inicial: "Atleta",
+      options: {
+        emailRedirectTo:
+          "https://adcannabrava.netlify.app/login",
+
+        data: {
+          nome,
+          perfil_inicial:
+            "Atleta",
+        },
       },
-    },
-  });
+    });
 
   if (error) {
     console.error(
@@ -72,27 +82,42 @@ export async function criarAcesso(
       error
     );
 
+    const mensagem =
+      error.message
+        .toLowerCase()
+        .includes("already")
+        ? "Já existe um acesso cadastrado com este e-mail."
+        : error.message;
+
     return {
       sucesso: false,
-      mensagem: error.message,
+      mensagem,
     };
   }
 
   /*
-    Se o Supabase criou sessão imediatamente,
-    este usuário acabou de se cadastrar como ATLETA.
-    Portanto, vai diretamente para Meus Dados.
+    Se a confirmação de e-mail estiver desativada
+    e o Supabase criar a sessão imediatamente,
+    encaminhamos direto para Meus Dados.
   */
-  if (data.session && data.user) {
+  if (
+    data.session &&
+    data.user
+  ) {
     redirect(
       "/portal-atleta/dados"
     );
   }
 
+  /*
+    Se a confirmação de e-mail estiver ativada,
+    o usuário deve confirmar o endereço antes
+    de entrar no Portal do Atleta.
+  */
   return {
     sucesso: true,
     confirmarEmail: true,
     mensagem:
-      "Acesso criado. Confirme seu e-mail e depois entre no Portal do Atleta.",
+      "Acesso criado com sucesso. Enviamos um e-mail de confirmação. Após confirmar, faça login para acessar o Portal do Atleta.",
   };
 }

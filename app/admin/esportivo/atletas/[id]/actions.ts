@@ -11,18 +11,25 @@ export async function atualizarStatusDocumento(
 ) {
   const supabase = await createClient();
 
+  const agora = new Date().toISOString();
+
   const { error } = await supabase
     .from("atleta_documentos")
     .update({
       status,
-      observacao: observacao?.trim() || null,
-      analisado_em: new Date().toISOString(),
-      atualizado_em: new Date().toISOString(),
+      observacao:
+        status === "correcao_solicitada"
+          ? observacao?.trim() || null
+          : null,
+      analisado_em: agora,
+      atualizado_em: agora,
     })
     .eq("id", documentoId)
     .eq("atleta_id", atletaId);
 
   if (error) {
+    console.error("Erro ao atualizar documento:", error);
+
     return {
       sucesso: false,
       mensagem: "Não foi possível atualizar o documento.",
@@ -35,6 +42,7 @@ export async function atualizarStatusDocumento(
     .eq("atleta_id", atletaId);
 
   const obrigatorios = [
+    "foto_3x4",
     "identidade",
     "residencia",
     "eleitoral",
@@ -61,42 +69,46 @@ export async function atualizarStatusDocumento(
         : possuiCorrecao
         ? "correcao_solicitada"
         : "em_analise",
-      atualizado_em: new Date().toISOString(),
+      atualizado_em: agora,
     })
     .eq("id", atletaId);
 
   if (status === "correcao_solicitada") {
-    const { data: atletaUsuario } =
-      await supabase
-        .from("atletas")
-        .select("usuario_id")
-        .eq("id", atletaId)
-        .maybeSingle();
+    const { data: atleta } = await supabase
+      .from("atletas")
+      .select("usuario_id")
+      .eq("id", atletaId)
+      .maybeSingle();
 
-    if (atletaUsuario?.usuario_id) {
-      await supabase
+    if (atleta?.usuario_id) {
+      const { error: notificacaoError } = await supabase
         .from("notificacoes")
         .insert({
-          usuario_id:
-            atletaUsuario.usuario_id,
-
-          titulo:
-            "Correção de documento",
-
+          usuario_id: atleta.usuario_id,
+          titulo: "Correção de documento",
           mensagem:
             observacao?.trim() ||
             "Um dos seus documentos precisa ser corrigido.",
-
-          tipo:
-            "documento",
-
-          link:
-            "/portal-atleta/documentos",
+          tipo: "documento",
+          link: "/portal-atleta/documentos",
         });
+
+      if (notificacaoError) {
+        console.error(
+          "Erro ao criar notificação:",
+          notificacaoError
+        );
+      }
     }
   }
-  revalidatePath(`/admin/esportivo/atletas/${atletaId}`);
+
+  revalidatePath(
+    `/admin/esportivo/atletas/${atletaId}`
+  );
   revalidatePath("/admin/esportivo/atletas");
+  revalidatePath("/portal-atleta");
+  revalidatePath("/portal-atleta/documentos");
+  revalidatePath("/portal-atleta/notificacoes");
 
   return {
     sucesso: true,
@@ -130,13 +142,14 @@ export async function salvarVinculo(
     };
   }
 
-  const { data: atleta } = await supabase
-    .from("atletas")
-    .select("status")
-    .eq("id", atletaId)
-    .single();
+  const { data: atleta, error: atletaError } =
+    await supabase
+      .from("atletas")
+      .select("status")
+      .eq("id", atletaId)
+      .single();
 
-  if (!atleta) {
+  if (atletaError || !atleta) {
     return {
       sucesso: false,
       mensagem: "Atleta não encontrado.",
@@ -144,10 +157,12 @@ export async function salvarVinculo(
   }
 
   if (
-    atleta.status !== "aprovado" &&
-    atleta.status !== "vinculado" &&
-    atleta.status !== "termo_liberado" &&
-    atleta.status !== "ativo"
+    ![
+      "aprovado",
+      "vinculado",
+      "termo_liberado",
+      "ativo",
+    ].includes(atleta.status)
   ) {
     return {
       sucesso: false,
@@ -164,6 +179,8 @@ export async function salvarVinculo(
     .eq("modalidade", modalidade)
     .maybeSingle();
 
+  const agora = new Date().toISOString();
+
   let erro;
 
   if (existente) {
@@ -173,7 +190,7 @@ export async function salvarVinculo(
         data_inicio: dataInicio,
         data_fim: dataFim,
         status: "ativo",
-        atualizado_em: new Date().toISOString(),
+        atualizado_em: agora,
       })
       .eq("id", existente.id);
 
@@ -206,47 +223,20 @@ export async function salvarVinculo(
     .from("atletas")
     .update({
       status: "vinculado",
-      atualizado_em: new Date().toISOString(),
+      atualizado_em: agora,
     })
     .eq("id", atletaId);
 
-  if (status === "correcao_solicitada") {
-    const { data: atletaUsuario } =
-      await supabase
-        .from("atletas")
-        .select("usuario_id")
-        .eq("id", atletaId)
-        .maybeSingle();
-
-    if (atletaUsuario?.usuario_id) {
-      await supabase
-        .from("notificacoes")
-        .insert({
-          usuario_id:
-            atletaUsuario.usuario_id,
-
-          titulo:
-            "Correção de documento",
-
-          mensagem:
-            observacao?.trim() ||
-            "Um dos seus documentos precisa ser corrigido.",
-
-          tipo:
-            "documento",
-
-          link:
-            "/portal-atleta/documentos",
-        });
-    }
-  }
-  revalidatePath(`/admin/esportivo/atletas/${atletaId}`);
+  revalidatePath(
+    `/admin/esportivo/atletas/${atletaId}`
+  );
   revalidatePath("/admin/esportivo/atletas");
 
   return {
     sucesso: true,
   };
 }
+
 export async function gerarTermo(
   atletaId: string
 ) {
@@ -309,15 +299,17 @@ export async function gerarTermo(
     };
   }
 
-  const periodoInicio =
-    vinculo.data_inicio
-      ? formatarDataTermo(vinculo.data_inicio)
-      : "não informado";
+  const periodoInicio = vinculo.data_inicio
+    ? formatarDataTermo(vinculo.data_inicio)
+    : "não informado";
 
-  const periodoFim =
-    vinculo.data_fim
-      ? formatarDataTermo(vinculo.data_fim)
-      : "não informado";
+  const periodoFim = vinculo.data_fim
+    ? formatarDataTermo(vinculo.data_fim)
+    : "não informado";
+
+  const nascimento = atleta.data_nascimento
+    ? formatarDataTermo(atleta.data_nascimento)
+    : "Não informada";
 
   const conteudo = `
 TERMO DE COMPROMISSO DO ATLETA
@@ -331,13 +323,7 @@ Pelo presente instrumento, a Associação Desportiva Cannabrava e o atleta abaix
 Nome: ${atleta.nome}
 CPF: ${atleta.cpf || "Não informado"}
 RG: ${atleta.rg || "Não informado"}
-Data de nascimento: ${
-    atleta.data_nascimento
-      ? formatarDataTermo(
-          atleta.data_nascimento
-        )
-      : "Não informada"
-  }
+Data de nascimento: ${nascimento}
 
 2. VÍNCULO ESPORTIVO
 
@@ -348,70 +334,55 @@ Período: ${periodoInicio} a ${periodoFim}
 
 3. COMPROMISSOS DO ATLETA
 
-O atleta compromete-se a:
-
-I - respeitar o Estatuto, regulamentos, normas internas e decisões da Associação Desportiva Cannabrava;
-
-II - manter conduta compatível com os princípios esportivos, institucionais e disciplinares da associação;
-
-III - zelar pelo nome, imagem, patrimônio, uniformes, materiais e demais bens disponibilizados pela entidade;
-
-IV - comparecer aos jogos, competições, atividades oficiais e demais compromissos para os quais for regularmente convocado, salvo motivo devidamente justificado;
-
-V - informar à associação qualquer alteração relevante em seus dados pessoais ou condição de participação esportiva;
-
-VI - respeitar dirigentes, membros da comissão técnica, atletas, adversários, árbitros, torcedores e demais participantes das atividades esportivas.
+O atleta compromete-se a respeitar o Estatuto, regulamentos, normas internas e decisões da Associação Desportiva Cannabrava, bem como manter conduta compatível com os princípios esportivos e institucionais da entidade.
 
 4. PARTICIPAÇÃO ESPORTIVA
 
 A participação do atleta ocorrerá conforme planejamento da comissão técnica, regulamentos das competições e decisões administrativas da Associação Desportiva Cannabrava.
 
-O presente termo não garante escalação, titularidade, número de camisa específico ou participação mínima em partidas.
-
 5. USO DE IMAGEM
 
-O atleta autoriza, observadas as normas aplicáveis, a utilização de sua imagem em registros das atividades da Associação Desportiva Cannabrava, incluindo fotografias, vídeos, publicações institucionais, materiais esportivos e divulgação das atividades da entidade.
+O atleta autoriza, observadas as normas aplicáveis, a utilização de sua imagem em registros e materiais institucionais relacionados às atividades da Associação Desportiva Cannabrava.
 
 6. VIGÊNCIA
 
-O presente termo está relacionado ao vínculo esportivo da temporada ${vinculo.temporada}, podendo ser encerrado ou atualizado conforme as normas e decisões da Associação Desportiva Cannabrava.
+O presente termo está relacionado ao vínculo esportivo da temporada ${vinculo.temporada}.
 
 7. DECLARAÇÃO
 
 O atleta declara que leu e compreendeu o conteúdo deste Termo de Compromisso e manifesta sua concordância por meio de aceite eletrônico no Portal do Atleta.
   `.trim();
 
-  const { data: existente } =
-    await supabase
-      .from("termos_compromisso")
-      .select("id")
-      .eq("atleta_id", atletaId)
-      .eq("vinculo_id", vinculo.id)
-      .in("status", [
-        "rascunho",
-        "gerado",
-        "aguardando_assinatura",
-      ])
-      .maybeSingle();
+  const { data: existente } = await supabase
+    .from("termos_compromisso")
+    .select("id")
+    .eq("atleta_id", atletaId)
+    .eq("vinculo_id", vinculo.id)
+    .in("status", [
+      "rascunho",
+      "gerado",
+      "aguardando_assinatura",
+    ])
+    .limit(1)
+    .maybeSingle();
 
-  let termoId: string | null = null;
+  const agora = new Date().toISOString();
+
   let erro;
+  let termoId: string | null = null;
 
   if (existente) {
     const resultado = await supabase
       .from("termos_compromisso")
       .update({
-        titulo:
-          "Termo de Compromisso do Atleta",
+        titulo: "Termo de Compromisso do Atleta",
         conteudo,
         status: "gerado",
-        gerado_em:
-          new Date().toISOString(),
+        gerado_em: agora,
         liberado_em: null,
-        aceite: false,
         assinado_em: null,
-        atualizado_em:
-          new Date().toISOString(),
+        aceite: false,
+        atualizado_em: agora,
       })
       .eq("id", existente.id)
       .select("id")
@@ -426,12 +397,10 @@ O atleta declara que leu e compreendeu o conteúdo deste Termo de Compromisso e 
         atleta_id: atletaId,
         vinculo_id: vinculo.id,
         versao: "1.0",
-        titulo:
-          "Termo de Compromisso do Atleta",
+        titulo: "Termo de Compromisso do Atleta",
         conteudo,
         status: "gerado",
-        gerado_em:
-          new Date().toISOString(),
+        gerado_em: agora,
       })
       .select("id")
       .single();
@@ -441,15 +410,11 @@ O atleta declara que leu e compreendeu o conteúdo deste Termo de Compromisso e 
   }
 
   if (erro) {
-    console.error(
-      "Erro ao gerar termo:",
-      erro
-    );
+    console.error("Erro ao gerar termo:", erro);
 
     return {
       sucesso: false,
-      mensagem:
-        "Não foi possível gerar o termo.",
+      mensagem: "Não foi possível gerar o termo.",
     };
   }
 
@@ -469,30 +434,25 @@ export async function liberarTermo(
 ) {
   const supabase = await createClient();
 
+  const agora = new Date().toISOString();
+
   const { error } = await supabase
     .from("termos_compromisso")
     .update({
-      status:
-        "aguardando_assinatura",
-      liberado_em:
-        new Date().toISOString(),
-      atualizado_em:
-        new Date().toISOString(),
+      status: "aguardando_assinatura",
+      liberado_em: agora,
+      atualizado_em: agora,
     })
     .eq("id", termoId)
     .eq("atleta_id", atletaId)
     .eq("status", "gerado");
 
   if (error) {
-    console.error(
-      "Erro ao liberar termo:",
-      error
-    );
+    console.error("Erro ao liberar termo:", error);
 
     return {
       sucesso: false,
-      mensagem:
-        "Não foi possível liberar o termo.",
+      mensagem: "Não foi possível liberar o termo.",
     };
   }
 
@@ -500,18 +460,15 @@ export async function liberarTermo(
     .from("atletas")
     .update({
       status: "termo_liberado",
-      atualizado_em:
-        new Date().toISOString(),
+      atualizado_em: agora,
     })
     .eq("id", atletaId);
 
   revalidatePath(
     `/admin/esportivo/atletas/${atletaId}`
   );
-
-  revalidatePath(
-    "/admin/esportivo/atletas"
-  );
+  revalidatePath("/admin/esportivo/atletas");
+  revalidatePath("/portal-atleta/termo");
 
   return {
     sucesso: true,
@@ -521,8 +478,293 @@ export async function liberarTermo(
 function formatarDataTermo(
   data: string
 ) {
-  const [ano, mes, dia] =
-    data.split("-");
+  const [ano, mes, dia] = data.split("-");
 
   return `${dia}/${mes}/${ano}`;
+}
+export async function excluirCadastroAtleta(
+  atletaId: string
+) {
+  const supabase = await createClient();
+
+  // ---------------------------------------------------------
+  // 1. CONFIRMAR USUÁRIO AUTENTICADO
+  // ---------------------------------------------------------
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return {
+      sucesso: false,
+      mensagem: "Usuário não autenticado.",
+    };
+  }
+
+  // ---------------------------------------------------------
+  // 2. LOCALIZAR USUÁRIO INTERNO
+  // ---------------------------------------------------------
+
+  const {
+    data: usuarioAtual,
+    error: usuarioError,
+  } = await supabase
+    .from("usuarios")
+    .select("id")
+    .eq("auth_user_id", user.id)
+    .maybeSingle();
+
+  if (usuarioError || !usuarioAtual) {
+    return {
+      sucesso: false,
+      mensagem: "Usuário administrativo não localizado.",
+    };
+  }
+
+  // ---------------------------------------------------------
+  // 3. CONFIRMAR PERFIL ADMINISTRADOR
+  // ---------------------------------------------------------
+
+  const {
+    data: usuarioPerfis,
+    error: perfisUsuarioError,
+  } = await supabase
+    .from("usuario_perfis")
+    .select("perfil_id")
+    .eq("usuario_id", usuarioAtual.id);
+
+  if (perfisUsuarioError) {
+    return {
+      sucesso: false,
+      mensagem: "Não foi possível validar as permissões.",
+    };
+  }
+
+  const idsPerfis =
+    (usuarioPerfis || []).map(
+      (item) => item.perfil_id
+    );
+
+  if (idsPerfis.length === 0) {
+    return {
+      sucesso: false,
+      mensagem:
+        "Somente administradores podem excluir cadastros.",
+    };
+  }
+
+  const {
+    data: perfis,
+    error: perfisError,
+  } = await supabase
+    .from("perfis")
+    .select("id,nome")
+    .in("id", idsPerfis);
+
+  if (perfisError) {
+    return {
+      sucesso: false,
+      mensagem: "Não foi possível validar o perfil.",
+    };
+  }
+
+  const ehAdministrador =
+    (perfis || []).some((perfil) =>
+      normalizarPerfil(perfil.nome) ===
+      "administrador"
+    );
+
+  if (!ehAdministrador) {
+    return {
+      sucesso: false,
+      mensagem:
+        "Somente o Administrador pode excluir o cadastro de um atleta.",
+    };
+  }
+
+  // ---------------------------------------------------------
+  // 4. CONFIRMAR ATLETA
+  // ---------------------------------------------------------
+
+  const {
+    data: atleta,
+    error: atletaError,
+  } = await supabase
+    .from("atletas")
+    .select("id,nome,usuario_id")
+    .eq("id", atletaId)
+    .maybeSingle();
+
+  if (atletaError || !atleta) {
+    return {
+      sucesso: false,
+      mensagem: "Atleta não encontrado.",
+    };
+  }
+
+  // ---------------------------------------------------------
+  // 5. LOCALIZAR ARQUIVOS PARA LIMPAR STORAGE
+  // ---------------------------------------------------------
+
+  const {
+    data: documentos,
+    error: documentosError,
+  } = await supabase
+    .from("atleta_documentos")
+    .select("caminho_arquivo")
+    .eq("atleta_id", atletaId);
+
+  if (documentosError) {
+    console.error(
+      "Erro ao localizar documentos:",
+      documentosError
+    );
+  }
+
+  const caminhosArquivos =
+    (documentos || [])
+      .map(
+        (documento) =>
+          documento.caminho_arquivo
+      )
+      .filter(
+        (caminho): caminho is string =>
+          Boolean(caminho)
+      );
+
+  // ---------------------------------------------------------
+  // 6. EXCLUIR TERMOS
+  // ---------------------------------------------------------
+
+  const { error: termoError } =
+    await supabase
+      .from("termos_compromisso")
+      .delete()
+      .eq("atleta_id", atletaId);
+
+  if (termoError) {
+    console.error(
+      "Erro ao excluir termos:",
+      termoError
+    );
+
+    return {
+      sucesso: false,
+      mensagem:
+        "Não foi possível excluir o Termo de Compromisso.",
+    };
+  }
+
+  // ---------------------------------------------------------
+  // 7. EXCLUIR VÍNCULOS
+  // ---------------------------------------------------------
+
+  const { error: vinculoError } =
+    await supabase
+      .from("atleta_vinculos")
+      .delete()
+      .eq("atleta_id", atletaId);
+
+  if (vinculoError) {
+    console.error(
+      "Erro ao excluir vínculos:",
+      vinculoError
+    );
+
+    return {
+      sucesso: false,
+      mensagem:
+        "Não foi possível excluir o vínculo esportivo.",
+    };
+  }
+
+  // ---------------------------------------------------------
+  // 8. EXCLUIR DOCUMENTOS DO BANCO
+  // ---------------------------------------------------------
+
+  const { error: excluirDocumentosError } =
+    await supabase
+      .from("atleta_documentos")
+      .delete()
+      .eq("atleta_id", atletaId);
+
+  if (excluirDocumentosError) {
+    console.error(
+      "Erro ao excluir documentos:",
+      excluirDocumentosError
+    );
+
+    return {
+      sucesso: false,
+      mensagem:
+        "Não foi possível excluir os documentos.",
+    };
+  }
+
+  // ---------------------------------------------------------
+  // 9. EXCLUIR ARQUIVOS DO STORAGE
+  // ---------------------------------------------------------
+
+  if (caminhosArquivos.length > 0) {
+    const { error: storageError } =
+      await supabase.storage
+        .from("atleta-documentos")
+        .remove(caminhosArquivos);
+
+    if (storageError) {
+      // Não impede a exclusão do cadastro.
+      // Apenas registra para eventual limpeza posterior.
+      console.error(
+        "Aviso: não foi possível remover todos os arquivos do Storage:",
+        storageError
+      );
+    }
+  }
+
+  // ---------------------------------------------------------
+  // 10. EXCLUIR CADASTRO DO ATLETA
+  // ---------------------------------------------------------
+
+  const { error: excluirAtletaError } =
+    await supabase
+      .from("atletas")
+      .delete()
+      .eq("id", atletaId);
+
+  if (excluirAtletaError) {
+    console.error(
+      "Erro ao excluir atleta:",
+      excluirAtletaError
+    );
+
+    return {
+      sucesso: false,
+      mensagem:
+        "Não foi possível excluir o cadastro do atleta. Pode existir outro registro vinculado a ele.",
+    };
+  }
+
+  revalidatePath("/admin/esportivo/atletas");
+  revalidatePath("/admin");
+  revalidatePath("/portal-atleta");
+  revalidatePath("/portal-atleta/dados");
+  revalidatePath("/portal-atleta/documentos");
+
+  return {
+    sucesso: true,
+    mensagem:
+      "Cadastro excluído. O atleta poderá iniciar um novo processo cadastral.",
+  };
+}
+
+function normalizarPerfil(
+  valor: string | null
+) {
+  return String(valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
 }

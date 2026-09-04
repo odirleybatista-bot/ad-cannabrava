@@ -1,214 +1,531 @@
 "use client";
 
-import Link from "next/link";
-import { useState } from "react";
+import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 import { criarAcesso } from "./actions";
 
 export default function CadastroPage() {
-  const [erro, setErro] =
+  const router = useRouter();
+
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
+  const [confirmarSenha, setConfirmarSenha] =
     useState("");
 
-  const [mensagem, setMensagem] =
-    useState("");
+  const [erro, setErro] = useState("");
+  const [mensagem, setMensagem] = useState("");
+  const [carregando, setCarregando] = useState(false);
 
-  const [salvando, setSalvando] =
-    useState(false);
-
-  async function cadastrar(
-    event: React.FormEvent<HTMLFormElement>
+  async function enviar(
+    event: FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
 
     setErro("");
     setMensagem("");
-    setSalvando(true);
+    setCarregando(true);
+
+    const formData = new FormData();
+
+    formData.set("nome", nome);
+    formData.set("email", email);
+    formData.set("senha", senha);
+    formData.set(
+      "confirmar_senha",
+      confirmarSenha
+    );
 
     try {
       const resultado =
-        await criarAcesso(
-          new FormData(
-            event.currentTarget
-          )
-        );
+        await criarAcesso(formData);
 
-      if (
-        resultado &&
-        !resultado.sucesso
-      ) {
+      if (!resultado?.sucesso) {
         setErro(
-          resultado.mensagem ||
-            "Não foi possível criar seu acesso."
+          resultado?.mensagem ||
+            "Não foi possível criar o acesso."
         );
 
+        setCarregando(false);
         return;
       }
 
-      if (
-        resultado?.confirmarEmail
-      ) {
+      if (resultado.confirmarEmail) {
         setMensagem(
           resultado.mensagem ||
-            "Cadastro realizado."
+            "Acesso criado. Verifique seu e-mail."
         );
+
+        setCarregando(false);
+        return;
       }
 
-    } finally {
-      setSalvando(false);
+      router.refresh();
+    } catch (error) {
+      console.error(error);
+
+      setErro(
+        "Não foi possível concluir o cadastro."
+      );
+
+      setCarregando(false);
     }
   }
 
   return (
-    <main className="min-h-screen bg-slate-100">
-
-      <div className="grid min-h-screen lg:grid-cols-[1.15fr_0.85fr]">
-
-        <div
-          className="hidden bg-cover bg-center lg:block"
-          style={{
-            backgroundImage:
-              "url('/login-background.png')",
-          }}
+    <main className="cadastro-page">
+      <section className="cadastro-visual">
+        <img
+          src="/login.png"
+          alt="A.D. Cannabrava"
+          className="cadastro-background"
         />
+      </section>
 
-        <div className="flex items-center justify-center bg-white px-6 py-12">
-
-          <div className="w-full max-w-md">
-
+      <section className="cadastro-area">
+        <div className="cadastro-box">
+          <div className="cadastro-title">
             <img
               src="/escudo.png"
               alt="A.D. Cannabrava"
-              className="h-20 w-20 object-contain"
+              className="cadastro-logo"
             />
 
-            <h1 className="mt-5 text-3xl font-black text-[#08265a]">
-              Criar meu acesso
-            </h1>
+            <h1>Criar meu acesso</h1>
 
-            <p className="mt-2 text-slate-500">
-              Portal do Atleta
+            <h2>Portal do Atleta</h2>
+
+            <p>
+              Crie seu acesso para iniciar seu cadastro
+              como atleta da Associação Desportiva
+              Cannabrava.
             </p>
+          </div>
 
-            <p className="mt-3 text-sm leading-6 text-slate-500">
-              Crie seu acesso para iniciar seu cadastro como atleta da Associação Desportiva Cannabrava.
-            </p>
-
+          <form
+            onSubmit={enviar}
+            className="cadastro-form"
+          >
             {erro && (
-              <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+              <div className="cadastro-error">
                 {erro}
               </div>
             )}
 
             {mensagem && (
-              <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-700">
+              <div className="cadastro-success">
                 {mensagem}
-
-                <Link
-                  href="/login"
-                  className="mt-4 block font-bold underline"
-                >
-                  Ir para o login
-                </Link>
               </div>
             )}
 
-            <form
-              onSubmit={cadastrar}
-              className="mt-7 space-y-5"
+            <label>
+              Nome completo
+
+              <input
+                type="text"
+                value={nome}
+                onChange={(event) =>
+                  setNome(event.target.value)
+                }
+                placeholder="Seu nome completo"
+                required
+              />
+            </label>
+
+            <label>
+              E-mail
+
+              <input
+                type="email"
+                value={email}
+                onChange={(event) =>
+                  setEmail(event.target.value)
+                }
+                placeholder="seuemail@exemplo.com"
+                autoComplete="email"
+                required
+              />
+            </label>
+
+            <label>
+              Senha
+
+              <input
+                type="password"
+                value={senha}
+                onChange={(event) =>
+                  setSenha(event.target.value)
+                }
+                placeholder="Mínimo de 6 caracteres"
+                autoComplete="new-password"
+                minLength={6}
+                required
+              />
+            </label>
+
+            <label>
+              Confirmar senha
+
+              <input
+                type="password"
+                value={confirmarSenha}
+                onChange={(event) =>
+                  setConfirmarSenha(
+                    event.target.value
+                  )
+                }
+                placeholder="Digite novamente"
+                autoComplete="new-password"
+                minLength={6}
+                required
+              />
+            </label>
+
+            <button
+              type="submit"
+              disabled={carregando}
+              className="cadastro-button"
             >
+              {carregando
+                ? "Criando acesso..."
+                : "Criar meu acesso"}
+            </button>
+          </form>
 
-              <div>
-                <label className="mb-2 block text-sm font-bold text-slate-700">
-                  Nome completo
-                </label>
+          <div className="voltar-login">
+            <span>
+              Já possui acesso?
+            </span>
 
-                <input
-                  name="nome"
-                  required
-                  placeholder="Seu nome completo"
-                  className="h-12 w-full rounded-xl border border-slate-300 px-4 outline-none focus:border-blue-600"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-bold text-slate-700">
-                  E-mail
-                </label>
-
-                <input
-                  name="email"
-                  type="email"
-                  required
-                  autoComplete="email"
-                  placeholder="seuemail@exemplo.com"
-                  className="h-12 w-full rounded-xl border border-slate-300 px-4 outline-none focus:border-blue-600"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-bold text-slate-700">
-                  Senha
-                </label>
-
-                <input
-                  name="senha"
-                  type="password"
-                  required
-                  minLength={6}
-                  autoComplete="new-password"
-                  placeholder="Mínimo de 6 caracteres"
-                  className="h-12 w-full rounded-xl border border-slate-300 px-4 outline-none focus:border-blue-600"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-bold text-slate-700">
-                  Confirmar senha
-                </label>
-
-                <input
-                  name="confirmar_senha"
-                  type="password"
-                  required
-                  minLength={6}
-                  autoComplete="new-password"
-                  placeholder="Digite novamente"
-                  className="h-12 w-full rounded-xl border border-slate-300 px-4 outline-none focus:border-blue-600"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={salvando}
-                className="h-12 w-full rounded-xl bg-[#08265a] font-bold text-white transition hover:bg-[#0b3478] disabled:opacity-50"
-              >
-                {salvando
-                  ? "Criando acesso..."
-                  : "Criar meu acesso"}
-              </button>
-
-            </form>
-
-            <div className="mt-7 border-t border-slate-200 pt-6 text-center">
-
-              <p className="text-sm text-slate-500">
-                Já possui acesso?
-              </p>
-
-              <Link
-                href="/login"
-                className="mt-2 inline-block font-bold text-[#08265a] hover:underline"
-              >
-                Entrar no Portal
-              </Link>
-
-            </div>
-
+            <a href="/login">
+              Entrar no sistema
+            </a>
           </div>
-
         </div>
+      </section>
 
-      </div>
+      <style jsx>{`
+        .cadastro-page {
+          width: 100%;
+          min-height: 100dvh;
 
+          display: grid;
+
+          grid-template-columns:
+            minmax(0, 62%)
+            minmax(430px, 38%);
+
+          background: #ffffff;
+
+          overflow-x: hidden;
+        }
+
+        .cadastro-visual {
+          height: 100dvh;
+
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          overflow-x: hidden;
+
+          background: #ffffff;
+        }
+
+        .cadastro-background {
+          width: 100%;
+          height: 100%;
+
+          object-fit: contain;
+          object-position: center center;
+
+          display: block;
+        }
+
+        .cadastro-area {
+          min-height: 100dvh;
+
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          padding: 24px 44px;
+
+          background: #ffffff;
+
+          overflow-y: auto;
+        }
+
+        .cadastro-box {
+          width: 100%;
+          max-width: 470px;
+        }
+
+        .cadastro-title {
+          margin-bottom: 22px;
+        }
+
+        .cadastro-logo {
+          width: 58px;
+          height: 58px;
+
+          object-fit: contain;
+
+          margin-bottom: 11px;
+        }
+
+        .cadastro-title h1 {
+          margin: 0;
+
+          color: #082f6b;
+
+          font-size: 30px;
+          line-height: 1.1;
+
+          font-weight: 800;
+        }
+
+        .cadastro-title h2 {
+          margin: 7px 0 0;
+
+          color: #60708a;
+
+          font-size: 16px;
+          font-weight: 500;
+        }
+
+        .cadastro-title p {
+          margin: 15px 0 0;
+
+          color: #60708a;
+
+          font-size: 14px;
+          line-height: 1.5;
+        }
+
+        .cadastro-form {
+          display: flex;
+          flex-direction: column;
+
+          gap: 14px;
+        }
+
+        .cadastro-form label {
+          display: flex;
+          flex-direction: column;
+
+          gap: 6px;
+
+          color: #12243d;
+
+          font-size: 13px;
+          font-weight: 700;
+        }
+
+        .cadastro-form input {
+          width: 100%;
+
+          box-sizing: border-box;
+
+          height: 48px;
+
+          border:
+            1px solid #bfd0e8;
+
+          border-radius: 11px;
+
+          background: #ffffff;
+
+          padding:
+            0 15px;
+
+          color: #10233f;
+
+          font-size: 14px;
+
+          outline: none;
+
+          transition: 0.2s;
+        }
+
+        .cadastro-form input:focus {
+          border-color: #0b3978;
+
+          box-shadow:
+            0 0 0 3px
+            rgba(11, 57, 120, 0.08);
+        }
+
+        .cadastro-button {
+          height: 48px;
+
+          margin-top: 4px;
+
+          border: 0;
+
+          border-radius: 11px;
+
+          background: #092f6c;
+
+          color: #ffffff;
+
+          font-size: 14px;
+          font-weight: 700;
+
+          cursor: pointer;
+        }
+
+        .cadastro-button:hover {
+          background: #072657;
+        }
+
+        .cadastro-button:disabled {
+          opacity: 0.65;
+
+          cursor: wait;
+        }
+
+        .cadastro-error {
+          padding: 11px 13px;
+
+          border:
+            1px solid #fecaca;
+
+          border-radius: 10px;
+
+          background: #fff1f2;
+
+          color: #b91c1c;
+
+          font-size: 13px;
+        }
+
+        .cadastro-success {
+          padding: 11px 13px;
+
+          border:
+            1px solid #bbf7d0;
+
+          border-radius: 10px;
+
+          background: #f0fdf4;
+
+          color: #166534;
+
+          font-size: 13px;
+        }
+
+        .voltar-login {
+          margin-top: 18px;
+
+          padding-top: 14px;
+
+          border-top:
+            1px solid #dce5f1;
+
+          display: flex;
+
+          align-items: center;
+          justify-content: center;
+
+          gap: 7px;
+
+          color: #64748b;
+
+          font-size: 12px;
+        }
+
+        .voltar-login a {
+          color: #082f6b;
+
+          font-weight: 800;
+
+          text-decoration: none;
+        }
+
+        .voltar-login a:hover {
+          text-decoration: underline;
+        }
+
+        @media (max-width: 1200px) {
+          .cadastro-page {
+            grid-template-columns:
+              minmax(0, 56%)
+              minmax(430px, 44%);
+          }
+
+          .cadastro-area {
+            padding: 24px 30px;
+          }
+        }
+
+        @media (max-width: 900px) {
+          .cadastro-page {
+            grid-template-columns:
+              45% 55%;
+          }
+
+          .cadastro-background {
+            object-fit: cover;
+
+            object-position: 35% center;
+          }
+        }
+
+        @media (max-width: 700px) {
+          .cadastro-page {
+            display: block;
+            width: 100%;
+            min-height: 100dvh;
+            overflow-x: hidden;
+            overflow-y: auto;
+          }
+
+          .cadastro-visual {
+            width: 100%;
+            height: 210px;
+            min-height: 210px;
+          }
+
+          .cadastro-background {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center 38%;
+          }
+
+          .cadastro-area {
+            width: 100%;
+            min-height: calc(100dvh - 210px);
+            padding: 22px 18px 30px;
+            align-items: flex-start;
+          }
+
+          .cadastro-box {
+            width: 100%;
+            max-width: 100%;
+          }
+
+          .cadastro-title {
+            text-align: center;
+            margin-bottom: 20px;
+          }
+
+          .cadastro-logo {
+            margin-left: auto;
+            margin-right: auto;
+          }
+
+          .cadastro-title h1 {
+            font-size: 25px;
+          }
+
+          .cadastro-form input,
+          .cadastro-form button {
+            font-size: 16px;
+          }
+        }
+      `}</style>
     </main>
   );
 }

@@ -34,7 +34,7 @@ export default function PortalAtletaPage() {
           </p>
 
           <p className="mt-2 text-2xl font-black text-[#08265a]">
-            3 de 3
+            4 de 4
           </p>
 
           <p className="mt-2 text-xs text-slate-500">
