@@ -87,11 +87,31 @@ export async function salvarDadosAtleta(
   const email =
     valor(formData, "email");
 
+  /*
+   * A tela pode enviar "endereco".
+   * No banco a coluna correta é "logradouro".
+   */
+  const logradouro =
+    valor(formData, "logradouro") ||
+    valor(formData, "endereco");
+
+  const numero =
+    valor(formData, "numero");
+
+  const bairro =
+    valor(formData, "bairro");
+
+  const cidade =
+    valor(formData, "cidade");
+
+  const uf =
+    valor(formData, "uf");
+
+  const cep =
+    valor(formData, "cep");
+
   const modalidade =
-    valor(
-      formData,
-      "modalidade"
-    );
+    valor(formData, "modalidade");
 
   const posicao =
     valor(formData, "posicao");
@@ -103,6 +123,10 @@ export async function salvarDadosAtleta(
     !dataNascimento ||
     !telefone ||
     !email ||
+    !logradouro ||
+    !bairro ||
+    !cidade ||
+    !uf ||
     !modalidade ||
     !posicao
   ) {
@@ -166,6 +190,27 @@ export async function salvarDadosAtleta(
 
     email,
 
+    /*
+     * Endereço - nomes reais da tabela atletas
+     */
+    logradouro,
+
+    numero:
+      nullSeVazio(numero),
+
+    bairro,
+
+    cidade,
+
+    uf:
+      uf.toUpperCase(),
+
+    cep:
+      nullSeVazio(cep),
+
+    /*
+     * Informações esportivas
+     */
     modalidade,
 
     posicao,
@@ -275,6 +320,10 @@ export async function salvarDadosAtleta(
 
   revalidatePath(
     "/portal-atleta/dados"
+  );
+
+  revalidatePath(
+    "/portal-atleta/documentos"
   );
 
   revalidatePath(
