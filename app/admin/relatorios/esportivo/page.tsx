@@ -481,6 +481,27 @@ export default async function RelatoriosEsportivosPage() {
           }
         }
       `}</style>
-    </main>
+    
+      <Link
+        href="/admin/relatorios/esportivo/atletas-por-modalidade"
+        className="group rounded-2xl border border-slate-200 bg-white p-6 transition hover:border-blue-300 hover:shadow-md"
+      >
+        <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-lg font-black text-blue-700">
+          AM
+        </div>
+
+        <h2 className="text-lg font-black text-[#08265a]">
+          Atletas por Modalidade
+        </h2>
+
+        <p className="mt-2 text-sm leading-6 text-slate-500">
+          Relação de atletas agrupados por modalidade, com nome, apelido, RG, título de eleitor e posição.
+        </p>
+
+        <span className="mt-5 inline-flex text-sm font-bold text-blue-700">
+          Abrir relatório →
+        </span>
+      </Link>
+</main>
   );
 }
