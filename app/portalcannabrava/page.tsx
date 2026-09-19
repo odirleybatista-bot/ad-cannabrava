@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import ContadorAcessos from "./ContadorAcessos";
 
 export const dynamic = "force-dynamic";
 
@@ -472,6 +473,20 @@ export default async function PortalCannabravaPage() {
           src="/escudo.png"
           alt="A.D. Cannabrava"
         />
+      </section>
+
+      <section className="faixa-contador">
+        <div>
+          <span className="contador-rotulo">
+            PORTAL CANNABRAVA EM NÚMEROS
+          </span>
+
+          <h2>
+            Nossa comunidade acompanha de perto.
+          </h2>
+        </div>
+
+        <ContadorAcessos />
       </section>
 
       <footer>
@@ -1387,6 +1402,99 @@ export default async function PortalCannabravaPage() {
           footer {
             flex-direction: column;
             padding: 18px 16px;
+          }
+        }
+
+        .faixa-contador {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 30px;
+          padding: 25px 7%;
+          border-top: 1px solid #dce5f0;
+          background: white;
+        }
+
+        .contador-rotulo {
+          display: block;
+          color: #168447;
+          font-size: 7px;
+          font-weight: 900;
+          letter-spacing: .09em;
+        }
+
+        .faixa-contador h2 {
+          margin: 4px 0 0;
+          color: #082e69;
+          font-size: 18px;
+        }
+
+        .contador-acessos {
+          display: flex;
+          align-items: center;
+          gap: 18px;
+          padding: 12px 18px;
+          border: 1px solid #dce5f0;
+          border-radius: 12px;
+          background: #f7f9fc;
+        }
+
+        .contador-acessos > div {
+          min-width: 115px;
+          text-align: center;
+        }
+
+        .contador-acessos span {
+          display: block;
+          color: #64748b;
+          font-size: 6px;
+          font-weight: 900;
+          letter-spacing: .06em;
+        }
+
+        .contador-acessos strong {
+          display: block;
+          margin-top: 3px;
+          color: #082e69;
+          font-size: 21px;
+        }
+
+        .contador-acessos i {
+          width: 1px;
+          height: 35px;
+          background: #dce5f0;
+        }
+
+        .contador-acessos.carregando {
+          color: #94a3b8;
+          font-size: 8px;
+        }
+
+        @media(max-width:760px) {
+          .faixa-contador {
+            align-items: stretch;
+            flex-direction: column;
+            gap: 14px;
+            padding: 22px 16px;
+          }
+
+          .faixa-contador h2 {
+            font-size: 17px;
+          }
+
+          .contador-acessos {
+            width: 100%;
+            justify-content: space-around;
+            padding: 12px 8px;
+          }
+
+          .contador-acessos > div {
+            min-width: 0;
+            flex: 1;
+          }
+
+          .contador-acessos strong {
+            font-size: 20px;
           }
         }
       `}</style>
