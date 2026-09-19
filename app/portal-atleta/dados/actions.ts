@@ -15,6 +15,24 @@ function valor(
     : "";
 }
 
+function primeiroValor(
+  formData: FormData,
+  nomes: string[]
+) {
+  for (const nome of nomes) {
+    const resultado = valor(
+      formData,
+      nome
+    );
+
+    if (resultado) {
+      return resultado;
+    }
+  }
+
+  return "";
+}
+
 function nullSeVazio(
   valorRecebido: string
 ) {
@@ -23,16 +41,36 @@ function nullSeVazio(
     : valorRecebido;
 }
 
-function numeroOuNull(
+function inteiroOuNull(
   valorRecebido: string
 ) {
   if (!valorRecebido) {
     return null;
   }
 
-  const numero = Number(
-    valorRecebido.replace(",", ".")
-  );
+  const numero =
+    Number.parseInt(
+      valorRecebido,
+      10
+    );
+
+  return Number.isFinite(numero)
+    ? numero
+    : null;
+}
+
+function decimalOuNull(
+  valorRecebido: string
+) {
+  if (!valorRecebido) {
+    return null;
+  }
+
+  const numero =
+    Number(
+      valorRecebido
+        .replace(",", ".")
+    );
 
   return Number.isFinite(numero)
     ? numero
@@ -42,38 +80,71 @@ function numeroOuNull(
 export async function salvarDadosAtleta(
   formData: FormData
 ): Promise<void> {
-  const supabase = await createClient();
+  const supabase =
+    await createClient();
 
   const {
     data: { user },
     error: authError,
-  } = await supabase.auth.getUser();
+  } =
+    await supabase.auth.getUser();
 
-  if (authError || !user) {
+  if (
+    authError ||
+    !user
+  ) {
     redirect("/login");
   }
 
   const {
     data: usuarioId,
     error: usuarioError,
-  } = await supabase.rpc(
-    "usuario_id_atual"
-  );
+  } =
+    await supabase.rpc(
+      "usuario_id_atual"
+    );
 
-  if (usuarioError || !usuarioId) {
+  if (
+    usuarioError ||
+    !usuarioId
+  ) {
+    console.error(
+      "Erro ao localizar usuário:",
+      usuarioError
+    );
+
     throw new Error(
       "Não foi possível localizar o seu cadastro de usuário."
     );
   }
 
+  // =========================================================
+  // DADOS PESSOAIS
+  // =========================================================
+
   const nome =
-    valor(formData, "nome");
+    valor(
+      formData,
+      "nome"
+    );
+
+  const apelido =
+    valor(
+      formData,
+      "apelido"
+    );
 
   const cpf =
-    valor(formData, "cpf");
+    valor(
+      formData,
+      "cpf"
+    );
 
   const rg =
-    valor(formData, "rg");
+    valor(
+      formData,
+      "rg"
+    );
 
   const dataNascimento =
     valor(
@@ -82,58 +153,229 @@ export async function salvarDadosAtleta(
     );
 
   const telefone =
-    valor(formData, "telefone");
+    valor(
+      formData,
+      "telefone"
+    );
 
   const email =
-    valor(formData, "email");
+    valor(
+      formData,
+      "email"
+    );
 
-  /*
-   * A tela pode enviar "endereco".
-   * No banco a coluna correta é "logradouro".
-   */
+  // =========================================================
+  // ENDEREÇO
+  //
+  // A tela antiga usa "endereco".
+  // O banco usa "logradouro".
+  // Aceitamos os dois.
+  // =========================================================
+
   const logradouro =
-    valor(formData, "logradouro") ||
-    valor(formData, "endereco");
+    primeiroValor(
+      formData,
+      [
+        "logradouro",
+        "endereco",
+      ]
+    );
 
   const numero =
-    valor(formData, "numero");
+    valor(
+      formData,
+      "numero"
+    );
+
+  const complemento =
+    valor(
+      formData,
+      "complemento"
+    );
 
   const bairro =
-    valor(formData, "bairro");
+    valor(
+      formData,
+      "bairro"
+    );
 
   const cidade =
-    valor(formData, "cidade");
+    valor(
+      formData,
+      "cidade"
+    );
 
   const uf =
-    valor(formData, "uf");
+    valor(
+      formData,
+      "uf"
+    );
 
   const cep =
-    valor(formData, "cep");
+    valor(
+      formData,
+      "cep"
+    );
+
+  // =========================================================
+  // DADOS ESPORTIVOS
+  // =========================================================
 
   const modalidade =
-    valor(formData, "modalidade");
+    valor(
+      formData,
+      "modalidade"
+    );
 
   const posicao =
-    valor(formData, "posicao");
+    valor(
+      formData,
+      "posicao"
+    );
 
-  if (
-    !nome ||
-    !cpf ||
-    !rg ||
-    !dataNascimento ||
-    !telefone ||
-    !email ||
-    !logradouro ||
-    !bairro ||
-    !cidade ||
-    !uf ||
-    !modalidade ||
-    !posicao
-  ) {
+  const numeroCamisa =
+    valor(
+      formData,
+      "numero_camisa"
+    );
+
+  const pePreferencial =
+    primeiroValor(
+      formData,
+      [
+        "pe_preferencial",
+        "pe",
+      ]
+    );
+
+  const altura =
+    valor(
+      formData,
+      "altura"
+    );
+
+  const peso =
+    valor(
+      formData,
+      "peso"
+    );
+
+  const registroEsportivo =
+    valor(
+      formData,
+      "registro_esportivo"
+    );
+
+  // =========================================================
+  // EMERGÊNCIA
+  //
+  // O banco possui tanto os campos novos emergencia_*
+  // quanto contato_emergencia / telefone_emergencia.
+  // =========================================================
+
+  const emergenciaNome =
+    primeiroValor(
+      formData,
+      [
+        "emergencia_nome",
+        "contato_emergencia",
+      ]
+    );
+
+  const emergenciaParentesco =
+    valor(
+      formData,
+      "emergencia_parentesco"
+    );
+
+  const emergenciaTelefone =
+    primeiroValor(
+      formData,
+      [
+        "emergencia_telefone",
+        "telefone_emergencia",
+      ]
+    );
+
+  // =========================================================
+  // VALIDAÇÃO
+  // =========================================================
+
+  if (!nome) {
     throw new Error(
-      "Preencha todos os campos obrigatórios."
+      "Informe o nome completo."
     );
   }
+
+  if (!cpf) {
+    throw new Error(
+      "Informe o CPF."
+    );
+  }
+
+  if (!rg) {
+    throw new Error(
+      "Informe o RG."
+    );
+  }
+
+  if (!dataNascimento) {
+    throw new Error(
+      "Informe a data de nascimento."
+    );
+  }
+
+  if (!telefone) {
+    throw new Error(
+      "Informe o telefone."
+    );
+  }
+
+  if (!email) {
+    throw new Error(
+      "Informe o e-mail."
+    );
+  }
+
+  if (!logradouro) {
+    throw new Error(
+      "Informe o endereço."
+    );
+  }
+
+  if (!bairro) {
+    throw new Error(
+      "Informe o bairro."
+    );
+  }
+
+  if (!cidade) {
+    throw new Error(
+      "Informe a cidade."
+    );
+  }
+
+  if (!uf) {
+    throw new Error(
+      "Informe a UF."
+    );
+  }
+
+  if (!modalidade) {
+    throw new Error(
+      "Informe a modalidade."
+    );
+  }
+
+  if (!posicao) {
+    throw new Error(
+      "Informe a posição."
+    );
+  }
+
+  // =========================================================
+  // LOCALIZAR CADASTRO ATUAL
+  // =========================================================
 
   const {
     data: atletaAtual,
@@ -141,7 +383,9 @@ export async function salvarDadosAtleta(
   } =
     await supabase
       .from("atletas")
-      .select("id,status")
+      .select(
+        "id,status"
+      )
       .eq(
         "usuario_id",
         usuarioId
@@ -162,114 +406,184 @@ export async function salvarDadosAtleta(
     );
 
     throw new Error(
-      "Não foi possível localizar o cadastro do atleta."
+      atletaBuscaError.message
     );
   }
 
+  // =========================================================
+  // OBJETO COM SOMENTE COLUNAS REAIS DA TABELA
+  // =========================================================
+
   const dados = {
-    usuario_id: usuarioId,
+    usuario_id:
+      usuarioId,
 
     nome,
 
     apelido:
-      nullSeVazio(
-        valor(
-          formData,
-          "apelido"
-        )
-      ),
+      nullSeVazio(apelido),
 
-    cpf,
+    cpf:
+      nullSeVazio(cpf),
 
-    rg,
+    rg:
+      nullSeVazio(rg),
 
     data_nascimento:
-      dataNascimento,
+      nullSeVazio(
+        dataNascimento
+      ),
 
-    telefone,
+    telefone:
+      nullSeVazio(
+        telefone
+      ),
 
-    email,
-
-    /*
-     * Endereço - nomes reais da tabela atletas
-     */
-    logradouro,
-
-    numero:
-      nullSeVazio(numero),
-
-    bairro,
-
-    cidade,
-
-    uf:
-      uf.toUpperCase(),
+    email:
+      nullSeVazio(email),
 
     cep:
       nullSeVazio(cep),
 
-    /*
-     * Informações esportivas
-     */
-    modalidade,
+    cidade:
+      nullSeVazio(
+        cidade
+      ),
 
-    posicao,
+    uf:
+      nullSeVazio(
+        uf.toUpperCase()
+      ),
+
+    bairro:
+      nullSeVazio(
+        bairro
+      ),
+
+    logradouro:
+      nullSeVazio(
+        logradouro
+      ),
+
+    numero:
+      nullSeVazio(
+        numero
+      ),
+
+    complemento:
+      nullSeVazio(
+        complemento
+      ),
+
+    modalidade:
+      nullSeVazio(
+        modalidade
+      ),
+
+    posicao:
+      nullSeVazio(
+        posicao
+      ),
 
     numero_camisa:
-      numeroOuNull(
-        valor(
-          formData,
-          "numero_camisa"
-        )
+      inteiroOuNull(
+        numeroCamisa
       ),
 
     pe_preferencial:
       nullSeVazio(
-        valor(
-          formData,
-          "pe_preferencial"
-        ) ||
-        valor(
-          formData,
-          "pe"
-        )
+        pePreferencial
       ),
 
     altura:
-      numeroOuNull(
-        valor(
-          formData,
-          "altura"
-        )
+      decimalOuNull(
+        altura
       ),
 
     peso:
-      numeroOuNull(
-        valor(
-          formData,
-          "peso"
-        )
+      decimalOuNull(
+        peso
+      ),
+
+    registro_esportivo:
+      nullSeVazio(
+        registroEsportivo
+      ),
+
+    emergencia_nome:
+      nullSeVazio(
+        emergenciaNome
+      ),
+
+    emergencia_parentesco:
+      nullSeVazio(
+        emergenciaParentesco
+      ),
+
+    emergencia_telefone:
+      nullSeVazio(
+        emergenciaTelefone
+      ),
+
+    contato_emergencia:
+      nullSeVazio(
+        emergenciaNome
+      ),
+
+    telefone_emergencia:
+      nullSeVazio(
+        emergenciaTelefone
       ),
 
     atualizado_em:
-      new Date().toISOString(),
+      new Date()
+        .toISOString(),
   };
 
-  let erro;
+  // =========================================================
+  // UPDATE / INSERT
+  // =========================================================
 
   if (atletaAtual?.id) {
-    const resultado =
+    const {
+      error: updateError,
+    } =
       await supabase
         .from("atletas")
         .update(dados)
         .eq(
           "id",
           atletaAtual.id
+        )
+        .eq(
+          "usuario_id",
+          usuarioId
         );
 
-    erro = resultado.error;
+    if (updateError) {
+      console.error(
+        "ERRO UPDATE ATLETA:",
+        {
+          message:
+            updateError.message,
+          details:
+            updateError.details,
+          hint:
+            updateError.hint,
+          code:
+            updateError.code,
+        }
+      );
+
+      throw new Error(
+        updateError.message ||
+          "Não foi possível atualizar os dados do atleta."
+      );
+    }
   } else {
-    const resultado =
+    const {
+      error: insertError,
+    } =
       await supabase
         .from("atletas")
         .insert({
@@ -278,20 +592,31 @@ export async function salvarDadosAtleta(
             "pre_cadastro",
         });
 
-    erro = resultado.error;
+    if (insertError) {
+      console.error(
+        "ERRO INSERT ATLETA:",
+        {
+          message:
+            insertError.message,
+          details:
+            insertError.details,
+          hint:
+            insertError.hint,
+          code:
+            insertError.code,
+        }
+      );
+
+      throw new Error(
+        insertError.message ||
+          "Não foi possível criar o cadastro do atleta."
+      );
+    }
   }
 
-  if (erro) {
-    console.error(
-      "Erro ao salvar atleta:",
-      erro
-    );
-
-    throw new Error(
-      erro.message ||
-        "Não foi possível salvar os dados."
-    );
-  }
+  // =========================================================
+  // SINCRONIZAR NOME / EMAIL DO USUÁRIO
+  // =========================================================
 
   const {
     error: usuarioUpdateError,
@@ -309,10 +634,14 @@ export async function salvarDadosAtleta(
 
   if (usuarioUpdateError) {
     console.error(
-      "Aviso ao atualizar usuário:",
+      "Aviso ao sincronizar usuário:",
       usuarioUpdateError
     );
   }
+
+  // =========================================================
+  // REVALIDAÇÃO
+  // =========================================================
 
   revalidatePath(
     "/portal-atleta"
@@ -329,6 +658,12 @@ export async function salvarDadosAtleta(
   revalidatePath(
     "/admin/esportivo/atletas"
   );
+
+  if (atletaAtual?.id) {
+    revalidatePath(
+      `/admin/esportivo/atletas/${atletaAtual.id}`
+    );
+  }
 
   redirect(
     "/portal-atleta/documentos"
