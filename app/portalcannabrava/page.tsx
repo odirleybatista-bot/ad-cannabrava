@@ -1116,6 +1116,279 @@ export default async function PortalCannabravaPage() {
             animation: none;
           }
         }
+
+        /* ====================================================
+           MOBILE - PORTAL CANNABRAVA
+           Banner compacto + patrocinadores horizontais
+           ==================================================== */
+
+        @keyframes patrocinadoresMobile {
+          0% {
+            transform: translateX(0);
+          }
+
+          100% {
+            transform: translateX(calc(-50% - 5px));
+          }
+        }
+
+        @media (max-width: 760px) {
+
+          .cabecalho {
+            position: static;
+            min-height: 74px;
+            padding: 8px 16px;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+          }
+
+          .marca {
+            gap: 7px;
+          }
+
+          .marca img {
+            width: 42px;
+            height: 42px;
+          }
+
+          .marca span {
+            font-size: 6px;
+          }
+
+          .marca strong {
+            font-size: 14px;
+          }
+
+          nav {
+            width: auto;
+            flex: 0 0 auto;
+            overflow: visible;
+          }
+
+          nav a:not(.area-atleta) {
+            display: none;
+          }
+
+          .area-atleta {
+            padding: 9px 11px;
+            white-space: nowrap;
+            font-size: 8px;
+          }
+
+          /* Área principal deixa de ser duas colunas */
+          .area-destaque {
+            display: flex !important;
+            flex-direction: column;
+            width: 100%;
+            min-height: 0;
+            background: #082e69;
+          }
+
+          /* Banner */
+          .hero {
+            width: 100%;
+            min-height: 330px;
+            padding: 28px 20px 30px;
+            display: flex;
+            align-items: center;
+
+            background-size: cover;
+            background-position: 52% center;
+            background-repeat: no-repeat;
+          }
+
+          .hero-conteudo {
+            max-width: 360px;
+          }
+
+          .tag {
+            padding: 5px 8px;
+            font-size: 6px;
+          }
+
+          .hero h1 {
+            margin: 11px 0 8px;
+            font-size: clamp(
+              34px,
+              11vw,
+              47px
+            );
+            line-height: 1;
+          }
+
+          .hero p {
+            max-width: 330px;
+            font-size: 11px;
+            line-height: 1.5;
+          }
+
+          .hero-acoes {
+            gap: 7px;
+            margin-top: 17px;
+          }
+
+          .botao {
+            min-height: 39px;
+            padding: 0 13px;
+            font-size: 8px;
+          }
+
+          /* ================================================
+             PATROCINADORES NO SMARTPHONE
+             ================================================ */
+
+          .patrocinadores {
+            display: block !important;
+            width: 100%;
+            min-width: 0;
+            height: 145px;
+            padding: 7px 0 9px;
+            overflow: hidden;
+
+            border-left: 0;
+            border-top:
+              1px solid
+              rgba(255,255,255,.12);
+
+            background:
+              linear-gradient(
+                90deg,
+                #061e48,
+                #0b3976
+              );
+          }
+
+          .patrocinadores-titulo {
+            width: 100%;
+            height: 31px;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+          }
+
+          .patrocinadores-titulo span {
+            font-size: 5px;
+            letter-spacing: .1em;
+          }
+
+          .patrocinadores-titulo strong {
+            margin: 0;
+            font-size: 7px;
+            line-height: 1;
+          }
+
+          .patrocinadores-titulo strong br {
+            display: none;
+          }
+
+          .patrocinadores-janela {
+            width: 100%;
+            height: 98px;
+            overflow: hidden;
+
+            mask-image:
+              linear-gradient(
+                to right,
+                transparent 0,
+                black 5%,
+                black 95%,
+                transparent 100%
+              );
+
+            -webkit-mask-image:
+              linear-gradient(
+                to right,
+                transparent 0,
+                black 5%,
+                black 95%,
+                transparent 100%
+              );
+          }
+
+          .patrocinadores-scroll {
+            width: max-content;
+            height: 100%;
+
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 8px;
+
+            animation:
+              patrocinadoresMobile
+              32s
+              linear
+              infinite;
+          }
+
+          .patrocinador {
+            flex: 0 0 125px;
+            width: 125px;
+            min-height: 86px;
+            height: 86px;
+
+            padding: 6px;
+            gap: 2px;
+
+            border-radius: 9px;
+          }
+
+          .patrocinador img {
+            width: auto;
+            max-width: 110px;
+            height: auto;
+            max-height: 61px;
+            object-fit: contain;
+          }
+
+          .patrocinador span {
+            font-size: 5px;
+          }
+
+          /* Conteúdo abaixo */
+          .secao {
+            padding: 34px 16px;
+          }
+
+          .secao-topo h2 {
+            font-size: 25px;
+          }
+
+          .noticias-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .noticia.destaque {
+            grid-template-columns: 1fr;
+            grid-row: auto;
+          }
+
+          .imagem-noticia {
+            min-height: 150px;
+          }
+
+          .jogos-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .institucional {
+            grid-template-columns: 1fr;
+            padding: 40px 18px;
+          }
+
+          .institucional img {
+            width: 125px;
+          }
+
+          footer {
+            flex-direction: column;
+            padding: 18px 16px;
+          }
+        }
       `}</style>
     </main>
   );
