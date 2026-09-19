@@ -364,6 +364,23 @@ export default async function PortalAtletaPage() {
         </Link>
 
         <Link
+          href="/portal-atleta/convocacoes"
+          className="indicador"
+        >
+          <div className="icone convocacao">
+            JOG
+          </div>
+
+          <div>
+            <span>Convocações</span>
+            <strong>Partidas</strong>
+            <small>
+              Veja e responda suas convocações
+            </small>
+          </div>
+        </Link>
+
+        <Link
           href="/portal-atleta/desempenho"
           className="indicador"
         >
@@ -483,6 +500,11 @@ export default async function PortalAtletaPage() {
         <Link href="/portal-atleta/documentos">
           <strong>Documentos</strong>
           <span>Envie e acompanhe a análise dos documentos.</span>
+        </Link>
+
+        <Link href="/portal-atleta/convocacoes">
+          <strong>Convocações</strong>
+          <span>Veja os jogos e confirme sua disponibilidade.</span>
         </Link>
 
         <Link href="/portal-atleta/historico">
@@ -738,7 +760,7 @@ export default async function PortalAtletaPage() {
 
         .indicadores {
           display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
+          grid-template-columns: repeat(5, minmax(0, 1fr));
           gap: 12px;
           margin-bottom: 13px;
         }
@@ -778,6 +800,11 @@ export default async function PortalAtletaPage() {
 
         .termo {
           background: #edf8f1;
+          color: #168447;
+        }
+
+        .convocacao {
+          background: #e9f8ef;
           color: #168447;
         }
 
