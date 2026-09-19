@@ -3,6 +3,45 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+const patrocinadores = [
+  {
+    nome: "Sport Car",
+    logo: "/patrocinadores/sport-car.jpeg",
+  },
+  {
+    nome: "OK Contax",
+    logo: "/patrocinadores/ok-contax.jpeg",
+  },
+  {
+    nome: "O Ferraco",
+    logo: "/patrocinadores/o-ferraco.jpeg",
+  },
+  {
+    nome: "João Pneus",
+    logo: "/patrocinadores/joao-pneus.jpeg",
+  },
+  {
+    nome: "Café Salobro",
+    logo: "/patrocinadores/cafe-salobro.jpeg",
+  },
+  {
+    nome: "Dojo Alpha",
+    logo: "/patrocinadores/dojo-alpha.jpeg",
+  },
+  {
+    nome: "Lava Jato",
+    logo: "/patrocinadores/lava-jato.jpeg",
+  },
+  {
+    nome: "Luz do Sol",
+    logo: "/patrocinadores/luz-do-sol.jpeg",
+  },
+  {
+    nome: "Monkey Gastro Bar",
+    logo: "/patrocinadores/monkey.jpeg",
+  },
+];
+
 export default async function PortalCannabravaPage() {
   const supabase = await createClient();
 
@@ -22,9 +61,7 @@ export default async function PortalCannabravaPage() {
         horario,
         local,
         cidade,
-        status,
-        gols_cannabrava,
-        gols_adversario
+        status
       `)
       .gte("data_jogo", hoje)
       .in("status", [
@@ -94,48 +131,84 @@ export default async function PortalCannabravaPage() {
 
           <Link
             href="/login"
-            className="area-restrita"
+            className="area-atleta"
           >
             Área do Atleta
           </Link>
         </nav>
       </header>
 
-      <section className="hero">
-        <div className="hero-conteudo">
-          <span className="tag">
-            A.D. CANNABRAVA • 2026
-          </span>
+      <section className="area-destaque">
+        <div className="hero">
+          <div className="hero-conteudo">
+            <span className="tag">
+              A.D. CANNABRAVA • 2026
+            </span>
 
-          <h1>
-            Portal Cannabrava
-          </h1>
+            <h1>
+              Portal Cannabrava
+            </h1>
 
-          <p>
-            Notícias, jogos, resultados
-            e informações oficiais da
-            Associação Desportiva
-            Cannabrava.
-          </p>
+            <p>
+              Notícias, jogos,
+              resultados e informações
+              oficiais da Associação
+              Desportiva Cannabrava.
+            </p>
 
-          <div className="hero-acoes">
-            <a
-              href="#noticias"
-              className="botao principal"
-            >
-              Ver notícias
-            </a>
+            <div className="hero-acoes">
+              <a
+                href="#noticias"
+                className="botao verde"
+              >
+                Ver notícias
+              </a>
 
-            <a
-              href="#jogos"
-              className="botao secundario"
-            >
-              Próximos jogos
-            </a>
+              <a
+                href="#jogos"
+                className="botao transparente"
+              >
+                Próximos jogos
+              </a>
+            </div>
           </div>
         </div>
 
+        <aside className="patrocinadores">
+          <div className="patrocinadores-titulo">
+            <span>
+              APOIAM
+            </span>
 
+            <strong>
+              NOSSOS
+              <br />
+              PATROCINADORES
+            </strong>
+          </div>
+
+          <div className="patrocinadores-janela">
+            <div className="patrocinadores-scroll">
+              {[...patrocinadores, ...patrocinadores].map(
+                (patrocinador, index) => (
+                  <div
+                    className="patrocinador"
+                    key={`${patrocinador.nome}-${index}`}
+                  >
+                    <img
+                      src={patrocinador.logo}
+                      alt={patrocinador.nome}
+                    />
+
+                    <span>
+                      {patrocinador.nome}
+                    </span>
+                  </div>
+                )
+              )}
+            </div>
+          </div>
+        </aside>
       </section>
 
       <section
@@ -166,7 +239,7 @@ export default async function PortalCannabravaPage() {
               />
             </div>
 
-            <div className="noticia-conteudo">
+            <div>
               <span>
                 INSTITUCIONAL
               </span>
@@ -178,58 +251,56 @@ export default async function PortalCannabravaPage() {
 
               <p>
                 A associação foi criada
-                para fortalecer o esporte,
-                formar atletas e ampliar
-                oportunidades para a
-                comunidade de Canarana.
+                para fortalecer o
+                esporte, formar atletas
+                e ampliar oportunidades
+                para a comunidade de
+                Canarana.
               </p>
             </div>
           </article>
 
           <article className="noticia">
-            <div className="noticia-conteudo">
-              <span>
-                FUTEBOL
-              </span>
+            <span>
+              FUTEBOL
+            </span>
 
-              <h3>
-                Primeira aparição com
-                vitória por 2 x 1
-              </h3>
+            <h3>
+              Primeira aparição com
+              vitória por 2 x 1
+            </h3>
 
-              <p>
-                A camisa ainda não era
-                a oficial, mas o futebol
-                foi original e de qualidade.
-              </p>
-            </div>
+            <p>
+              A camisa ainda não era a
+              oficial, mas o futebol foi
+              original e de qualidade.
+            </p>
           </article>
 
           <article className="noticia">
-            <div className="noticia-conteudo">
-              <span>
-                PROJETO
-              </span>
+            <span>
+              PROJETO
+            </span>
 
-              <h3>
-                Esporte para além das
-                quatro linhas
-              </h3>
+            <h3>
+              Esporte para além das
+              quatro linhas
+            </h3>
 
-              <p>
-                O projeto busca fomentar
-                o esporte coletivo e
-                individual e contribuir
-                para a formação de jovens.
-              </p>
-            </div>
+            <p>
+              O projeto busca fomentar
+              o esporte coletivo e
+              individual e contribuir
+              para a formação dos
+              jovens.
+            </p>
           </article>
         </div>
       </section>
 
       <section
         id="jogos"
-        className="secao secao-cinza"
+        className="secao fundo-cinza"
       >
         <div className="secao-topo">
           <span>
@@ -249,18 +320,17 @@ export default async function PortalCannabravaPage() {
         {!proximasPartidas ||
         proximasPartidas.length === 0 ? (
           <div className="vazio">
-            Nenhuma partida agendada
-            no momento.
+            Nenhuma partida agendada.
           </div>
         ) : (
           <div className="jogos-grid">
             {proximasPartidas.map(
               (partida: any) => (
                 <article
-                  key={partida.id}
                   className="jogo"
+                  key={partida.id}
                 >
-                  <div className="data-jogo">
+                  <div className="data">
                     <strong>
                       {dia(
                         partida.data_jogo
@@ -274,7 +344,7 @@ export default async function PortalCannabravaPage() {
                     </span>
                   </div>
 
-                  <div className="jogo-conteudo">
+                  <div>
                     <span className="tipo">
                       {nomeTipo(
                         partida.tipo
@@ -320,26 +390,20 @@ export default async function PortalCannabravaPage() {
           <h2>
             Últimas partidas
           </h2>
-
-          <p>
-            Resultados recentes da
-            A.D. Cannabrava.
-          </p>
         </div>
 
         {!ultimosResultados ||
         ultimosResultados.length === 0 ? (
           <div className="vazio">
-            Nenhuma partida finalizada
-            disponível.
+            Nenhum resultado disponível.
           </div>
         ) : (
           <div className="resultados">
             {ultimosResultados.map(
               (partida: any) => (
                 <article
-                  key={partida.id}
                   className="resultado"
+                  key={partida.id}
                 >
                   <div>
                     <span>
@@ -417,8 +481,7 @@ export default async function PortalCannabravaPage() {
           </strong>
 
           <span>
-            Associação Desportiva
-            Cannabrava
+            Associação Desportiva Cannabrava
           </span>
         </div>
 
@@ -449,12 +512,12 @@ export default async function PortalCannabravaPage() {
         }
 
         .cabecalho {
-          min-height: 76px;
+          min-height: 72px;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 25px;
-          padding: 10px 6%;
+          gap: 20px;
+          padding: 9px 6%;
           background: white;
           border-bottom: 1px solid #e2e8f0;
           position: sticky;
@@ -495,83 +558,94 @@ export default async function PortalCannabravaPage() {
         }
 
         nav a {
-          color: #475569;
+          color: #334155;
           font-size: 9px;
-          font-weight: 800;
+          font-weight: 900;
           text-decoration: none;
         }
 
-        .area-restrita {
-          padding: 9px 12px;
+        .area-atleta {
+          padding: 10px 13px;
           border-radius: 8px;
           background: #082e69;
           color: white !important;
         }
 
+        .area-destaque {
+          width: 100%;
+          display: grid;
+          grid-template-columns:
+            minmax(0, 90fr)
+            minmax(135px, 10fr);
+          min-height: 455px;
+          background: #082e69;
+        }
+
         .hero {
           position: relative;
-          min-height: 500px;
+          min-width: 0;
+          min-height: 455px;
           display: flex;
           align-items: center;
-          padding: 65px 8%;
           overflow: hidden;
+          padding: 48px 7%;
 
           background-image:
             linear-gradient(
               90deg,
-              rgba(4, 24, 58, .72) 0%,
-              rgba(4, 24, 58, .48) 37%,
-              rgba(4, 24, 58, .12) 70%,
-              rgba(4, 24, 58, .03) 100%
+              rgba(3, 23, 55, .80) 0%,
+              rgba(3, 23, 55, .55) 31%,
+              rgba(3, 23, 55, .15) 58%,
+              rgba(3, 23, 55, .02) 100%
             ),
             url("/portal-cannabrava-hero.png");
 
           background-size: cover;
           background-position: center center;
           background-repeat: no-repeat;
-          color: white;
         }
 
         .hero-conteudo {
           position: relative;
           z-index: 2;
           width: 100%;
-          max-width: 650px;
+          max-width: 620px;
         }
 
         .tag {
           display: inline-flex;
           padding: 6px 9px;
           border-radius: 999px;
-          background: rgba(255,255,255,.1);
-          color: #8ee1ae;
-          font-size: 8px;
+          background: rgba(22,132,71,.8);
+          color: white;
+          font-size: 7px;
           font-weight: 900;
         }
 
         .hero h1 {
-          margin: 13px 0 10px;
+          margin: 13px 0 8px;
           color: white;
           font-size: clamp(
             38px,
-            6vw,
-            72px
+            5vw,
+            68px
           );
-          line-height: .95;
+          line-height: .98;
+          font-weight: 400;
         }
 
         .hero p {
-          max-width: 550px;
+          max-width: 590px;
           margin: 0;
-          color: #c4d1e0;
-          font-size: 15px;
-          line-height: 1.6;
+          color: #fff;
+          font-size: 14px;
+          line-height: 1.55;
         }
 
         .hero-acoes {
           display: flex;
           gap: 9px;
-          margin-top: 23px;
+          margin-top: 22px;
         }
 
         .botao {
@@ -586,68 +660,179 @@ export default async function PortalCannabravaPage() {
           text-decoration: none;
         }
 
-        .principal {
+        .verde {
           background: #168447;
           color: white;
         }
 
-        .secundario {
-          border: 1px solid rgba(255,255,255,.35);
+        .transparente {
+          border: 1px solid rgba(255,255,255,.5);
+          background: rgba(5,33,72,.25);
           color: white;
         }
 
-
-        .secao {
-          padding: 58px 7%;
+        .patrocinadores {
+          min-width: 135px;
+          height: 455px;
+          padding: 13px 9px;
+          overflow: hidden;
+          border-left: 1px solid rgba(255,255,255,.1);
+          background:
+            linear-gradient(
+              180deg,
+              #061e48,
+              #0b3976
+            );
         }
 
-        .secao-cinza {
+        .patrocinadores-titulo {
+          height: 58px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+        }
+
+        .patrocinadores-titulo span {
+          color: #73d79c;
+          font-size: 6px;
+          font-weight: 900;
+          letter-spacing: .12em;
+        }
+
+        .patrocinadores-titulo strong {
+          margin-top: 3px;
+          color: white;
+          font-size: 8px;
+          line-height: 1.25;
+        }
+
+        .patrocinadores-janela {
+          position: relative;
+          height: calc(100% - 58px);
+          overflow: hidden;
+          mask-image:
+            linear-gradient(
+              to bottom,
+              transparent 0,
+              black 7%,
+              black 93%,
+              transparent 100%
+            );
+        }
+
+        .patrocinadores-scroll {
+          display: flex;
+          flex-direction: column;
+          gap: 11px;
+          animation:
+            subirPatrocinadores
+            38s
+            linear
+            infinite;
+        }
+
+        .patrocinadores-scroll:hover {
+          animation-play-state: paused;
+        }
+
+        .patrocinador {
+          flex: 0 0 88px;
+          min-height: 88px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 4px;
+          padding: 8px 5px;
+          border-radius: 10px;
+          background: white;
+          box-shadow:
+            0 5px 15px
+            rgba(0,0,0,.15);
+        }
+
+        .patrocinador img {
+          width: 100%;
+          max-width: 95px;
+          max-height: 57px;
+          object-fit: contain;
+        }
+
+        .patrocinador span {
+          color: #475569;
+          font-size: 6px;
+          font-weight: 800;
+          text-align: center;
+        }
+
+        @keyframes subirPatrocinadores {
+          0% {
+            transform:
+              translateY(0);
+          }
+
+          100% {
+            transform:
+              translateY(
+                calc(-50% - 5px)
+              );
+          }
+        }
+
+        .secao {
+          padding: 48px 7%;
+        }
+
+        .fundo-cinza {
           background: #eef3f8;
         }
 
         .secao-topo span,
         .institucional span {
           color: #168447;
-          font-size: 8px;
+          font-size: 7px;
           font-weight: 900;
+          letter-spacing: .08em;
         }
 
         .secao-topo h2,
         .institucional h2 {
           margin: 4px 0;
           color: #082e69;
-          font-size: 30px;
+          font-size: 29px;
         }
 
         .secao-topo p {
-          margin: 0 0 22px;
+          margin: 0 0 20px;
           color: #64748b;
-          font-size: 11px;
+          font-size: 10px;
         }
 
         .noticias-grid {
           display: grid;
           grid-template-columns: 1.5fr 1fr;
-          gap: 12px;
+          gap: 11px;
         }
 
         .noticia {
-          padding: 20px;
+          padding: 19px;
           border: 1px solid #dce5f0;
-          border-radius: 14px;
+          border-radius: 13px;
           background: white;
         }
 
         .noticia.destaque {
           grid-row: span 2;
           display: grid;
-          grid-template-columns: .45fr 1fr;
-          gap: 20px;
+          grid-template-columns: .4fr 1fr;
           align-items: center;
+          gap: 18px;
         }
 
         .imagem-noticia {
-          min-height: 230px;
+          min-height: 205px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -657,10 +842,11 @@ export default async function PortalCannabravaPage() {
 
         .imagem-noticia img {
           width: 65%;
-          max-width: 160px;
+          max-width: 150px;
         }
 
-        .noticia span,
+        .noticia > span,
+        .noticia > div > span,
         .tipo {
           color: #168447;
           font-size: 7px;
@@ -670,7 +856,7 @@ export default async function PortalCannabravaPage() {
         .noticia h3 {
           margin: 5px 0 7px;
           color: #082e69;
-          font-size: 18px;
+          font-size: 17px;
         }
 
         .noticia p {
@@ -683,36 +869,36 @@ export default async function PortalCannabravaPage() {
         .jogos-grid {
           display: grid;
           grid-template-columns: repeat(2,1fr);
-          gap: 10px;
+          gap: 9px;
         }
 
         .jogo {
           display: flex;
-          gap: 13px;
-          padding: 14px;
+          gap: 12px;
+          padding: 13px;
           border: 1px solid #dce5f0;
-          border-radius: 12px;
+          border-radius: 11px;
           background: white;
         }
 
-        .data-jogo {
-          flex: 0 0 55px;
-          width: 55px;
-          height: 55px;
+        .data {
+          flex: 0 0 53px;
+          width: 53px;
+          height: 53px;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          border-radius: 10px;
+          border-radius: 9px;
           background: #eaf2ff;
         }
 
-        .data-jogo strong {
+        .data strong {
           color: #082e69;
-          font-size: 20px;
+          font-size: 19px;
         }
 
-        .data-jogo span {
+        .data span {
           color: #1763d6;
           font-size: 7px;
           font-weight: 900;
@@ -747,7 +933,7 @@ export default async function PortalCannabravaPage() {
           gap: 20px;
           padding: 13px 15px;
           border: 1px solid #dce5f0;
-          border-radius: 11px;
+          border-radius: 10px;
           background: white;
         }
 
@@ -767,11 +953,11 @@ export default async function PortalCannabravaPage() {
         .placar {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 9px;
         }
 
         .placar strong {
-          font-size: 22px;
+          font-size: 21px;
         }
 
         .placar b {
@@ -780,27 +966,32 @@ export default async function PortalCannabravaPage() {
 
         .institucional {
           display: grid;
-          grid-template-columns: 1fr .4fr;
+          grid-template-columns: 1fr .3fr;
           align-items: center;
           gap: 35px;
-          padding: 60px 8%;
+          padding: 55px 8%;
           background: #082e69;
           color: white;
         }
 
         .institucional h2 {
           color: white;
-          font-size: 34px;
+          font-size: 32px;
         }
 
         .institucional p {
+          max-width: 700px;
           color: #c4d1e0;
-          font-size: 12px;
+          font-size: 11px;
           line-height: 1.7;
         }
 
+        .institucional > div > strong {
+          color: #8ee1ae;
+        }
+
         .institucional img {
-          width: 180px;
+          width: 155px;
           max-width: 100%;
           justify-self: center;
         }
@@ -809,7 +1000,7 @@ export default async function PortalCannabravaPage() {
           display: flex;
           justify-content: space-between;
           gap: 20px;
-          padding: 22px 7%;
+          padding: 20px 7%;
           background: #061e48;
           color: white;
         }
@@ -826,69 +1017,103 @@ export default async function PortalCannabravaPage() {
         }
 
         .vazio {
-          padding: 35px;
+          padding: 32px;
           border: 1px dashed #cbd5e1;
           border-radius: 10px;
           background: white;
           color: #94a3b8;
+          font-size: 9px;
           text-align: center;
         }
 
-        @media(max-width:950px) {
-          .cabecalho {
-            align-items: flex-start;
-            flex-direction: column;
+        @media(max-width:1050px) {
+          .area-destaque {
+            grid-template-columns:
+              minmax(0, 86fr)
+              minmax(125px, 14fr);
           }
 
           .noticias-grid {
             grid-template-columns: 1fr;
           }
 
+          .noticia.destaque {
+            grid-row: auto;
+          }
+        }
+
+        @media(max-width:760px) {
+          .cabecalho {
+            position: static;
+            align-items: flex-start;
+            flex-direction: column;
+            padding: 12px 16px;
+          }
+
+          nav {
+            width: 100%;
+            overflow-x: auto;
+          }
+
+          nav a:not(.area-atleta) {
+            display: none;
+          }
+
+          .area-destaque {
+            display: block;
+            min-height: 400px;
+          }
+
           .hero {
-            min-height: 450px;
-            background-position: 58% center;
+            min-height: 400px;
+            padding: 38px 18px;
+            background-position:
+              45% center;
+          }
+
+          .hero h1 {
+            font-size: 40px;
+          }
+
+          .hero p {
+            max-width: 410px;
+            font-size: 12px;
+          }
+
+          .patrocinadores {
+            display: none;
+          }
+
+          .secao {
+            padding: 36px 14px;
           }
 
           .noticia.destaque {
-            grid-row: auto;
+            grid-template-columns: 1fr;
+          }
+
+          .imagem-noticia {
+            min-height: 160px;
           }
 
           .jogos-grid {
             grid-template-columns: 1fr;
           }
-        }
-
-        @media(max-width:650px) {
-          .cabecalho {
-            position: static;
-            padding: 12px 16px;
-          }
-
-          nav a:not(.area-restrita) {
-            display: none;
-          }
-
-          .hero {
-            min-height: 390px;
-            padding: 45px 18px;
-          }
-
-          .secao {
-            padding: 38px 14px;
-          }
-
-          .noticia.destaque {
-            grid-template-columns: 1fr;
-          }
 
           .institucional {
             grid-template-columns: 1fr;
-            padding: 45px 18px;
+            padding: 42px 18px;
           }
 
           footer {
             flex-direction: column;
-            padding: 20px 16px;
+            padding: 19px 16px;
+          }
+        }
+
+        @media(prefers-reduced-motion: reduce) {
+          .patrocinadores-scroll {
+            animation: none;
           }
         }
       `}</style>
@@ -919,13 +1144,24 @@ function dia(data: string) {
 
 function mes(data: string) {
   const meses = [
-    "JAN","FEV","MAR","ABR",
-    "MAI","JUN","JUL","AGO",
-    "SET","OUT","NOV","DEZ",
+    "JAN",
+    "FEV",
+    "MAR",
+    "ABR",
+    "MAI",
+    "JUN",
+    "JUL",
+    "AGO",
+    "SET",
+    "OUT",
+    "NOV",
+    "DEZ",
   ];
 
   const indice =
-    Number(data.split("-")[1]) - 1;
+    Number(
+      data.split("-")[1]
+    ) - 1;
 
   return meses[indice] || "";
 }
