@@ -161,5 +161,5 @@ export async function sair() {
   await supabase.auth
     .signOut();
 
-  redirect("/login");
+  redirect("/portalcannabrava");
 }

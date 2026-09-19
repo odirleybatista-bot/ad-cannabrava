@@ -7,7 +7,7 @@ export default async function MeusDadosPage() {
   const usuario = await getCurrentUser();
 
   if (!usuario) {
-    redirect("/login");
+    redirect("/portalcannabrava");
   }
 
   const supabase = await createClient();

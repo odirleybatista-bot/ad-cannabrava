@@ -11,7 +11,7 @@ export default async function AdminLayout({
   const usuario = await getCurrentUser();
 
   if (!usuario) {
-    redirect("/login");
+    redirect("/portalcannabrava");
   }
 
   const inicial =

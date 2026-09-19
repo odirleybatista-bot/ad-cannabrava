@@ -25,7 +25,7 @@ export async function salvarCompeticao(
   const usuario = await getCurrentUser();
 
   if (!usuario) {
-    redirect("/login");
+    redirect("/portalcannabrava");
   }
 
   if (

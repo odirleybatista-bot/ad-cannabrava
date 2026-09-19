@@ -42,7 +42,7 @@ export default async function TermoPage() {
     await getCurrentUser();
 
   if (!usuario) {
-    redirect("/login");
+    redirect("/portalcannabrava");
   }
 
   if (!usuario.atletaId) {

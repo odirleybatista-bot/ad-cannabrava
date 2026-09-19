@@ -15,7 +15,7 @@ export default async function PortalAtletaLayout({
     await getCurrentUser();
 
   if (!usuario) {
-    redirect("/login");
+    redirect("/portalcannabrava");
   }
 
   /*

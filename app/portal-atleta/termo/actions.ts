@@ -18,7 +18,7 @@ export async function assinarTermo(
     authError ||
     !user
   ) {
-    redirect("/login");
+    redirect("/portalcannabrava");
   }
 
   const termoId =

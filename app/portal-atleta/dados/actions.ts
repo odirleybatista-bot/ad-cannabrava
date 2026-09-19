@@ -93,7 +93,7 @@ export async function salvarDadosAtleta(
     authError ||
     !user
   ) {
-    redirect("/login");
+    redirect("/portalcannabrava");
   }
 
   const {

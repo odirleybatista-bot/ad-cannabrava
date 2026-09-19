@@ -16,7 +16,7 @@ export default function AdminLogoutButton() {
 
       await supabase.auth.signOut();
 
-      router.push("/login");
+      router.push("/portalcannabrava");
       router.refresh();
     } finally {
       setSaindo(false);

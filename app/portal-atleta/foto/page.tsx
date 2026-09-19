@@ -7,7 +7,7 @@ export default async function FotoAtletaPage() {
   const usuario = await getCurrentUser();
 
   if (!usuario) {
-    redirect("/login");
+    redirect("/portalcannabrava");
   }
 
   if (!usuario.atletaId) {

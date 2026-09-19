@@ -34,7 +34,7 @@ export default async function PortalAtletaPage() {
   const usuario = await getCurrentUser();
 
   if (!usuario) {
-    redirect("/login");
+    redirect("/portalcannabrava");
   }
 
   if (!usuario.atletaId) {
