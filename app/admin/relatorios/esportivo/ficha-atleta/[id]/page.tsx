@@ -103,12 +103,38 @@ export default async function FichaIndividualPage({
     .select(`
       id,
       tipo,
-      status
+      status,
+      caminho_arquivo
     `)
     .eq(
       "atleta_id",
       id
     );
+
+  const fotoDocumento =
+    (documentos || []).find(
+      (documento: any) =>
+        documento.tipo === "foto_3x4"
+    ) || null;
+
+  let fotoUrl: string | null = null;
+
+  if (
+    fotoDocumento?.caminho_arquivo
+  ) {
+    const {
+      data: fotoAssinada,
+    } = await supabase.storage
+      .from("atleta-documentos")
+      .createSignedUrl(
+        fotoDocumento.caminho_arquivo,
+        3600
+      );
+
+    fotoUrl =
+      fotoAssinada?.signedUrl ||
+      null;
+  }
 
   const {
     data: vinculo,
@@ -306,9 +332,9 @@ export default async function FichaIndividualPage({
 
           <div className="foto">
 
-            {atleta.foto_url ? (
+            {fotoUrl ? (
               <img
-                src={atleta.foto_url}
+                src={fotoUrl}
                 alt={atleta.nome}
               />
             ) : (
