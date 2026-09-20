@@ -6,7 +6,9 @@ import BotaoImprimir from "../../BotaoImprimir";
 function formatarData(data: string | null | undefined) {
   if (!data) return "Não informado";
 
-  const [ano, mes, dia] = data.substring(0, 10).split("-");
+  const [ano, mes, dia] = data
+    .substring(0, 10)
+    .split("-");
 
   if (!ano || !mes || !dia) {
     return data;
@@ -15,7 +17,9 @@ function formatarData(data: string | null | undefined) {
   return `${dia}/${mes}/${ano}`;
 }
 
-function textoStatus(status: string | null | undefined) {
+function textoStatus(
+  status: string | null | undefined
+) {
   const mapa: Record<string, string> = {
     pre_cadastro: "Pré-cadastro",
     documentos_enviados: "Documentos enviados",
@@ -31,20 +35,35 @@ function textoStatus(status: string | null | undefined) {
     gerado: "Gerado",
   };
 
-  return mapa[status || ""] || status || "Não informado";
+  return (
+    mapa[status || ""] ||
+    status ||
+    "Não informado"
+  );
 }
 
-function DocumentoLinha({
+function Campo({
   titulo,
   valor,
+  destaque = false,
 }: {
   titulo: string;
   valor: React.ReactNode;
+  destaque?: boolean;
 }) {
   return (
-    <div className="campo-documento">
-      <div className="campo-titulo">{titulo}</div>
-      <div className="campo-valor">{valor || "Não informado"}</div>
+    <div className="campo">
+      <span>{titulo}</span>
+
+      <strong
+        className={
+          destaque
+            ? "valor destaque"
+            : "valor"
+        }
+      >
+        {valor || "Não informado"}
+      </strong>
     </div>
   );
 }
@@ -52,73 +71,97 @@ function DocumentoLinha({
 export default async function FichaIndividualPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{
+    id: string;
+  }>;
 }) {
   const { id } = await params;
 
-  const supabase = await createClient();
+  const supabase =
+    await createClient();
 
-  const { data: atleta, error: atletaError } =
-    await supabase
-      .from("atletas")
-      .select("*")
-      .eq("id", id)
-      .maybeSingle();
+  const {
+    data: atleta,
+    error: atletaError,
+  } = await supabase
+    .from("atletas")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
 
-  if (atletaError || !atleta) {
+  if (
+    atletaError ||
+    !atleta
+  ) {
     notFound();
   }
 
-  const { data: documentos } =
-    await supabase
-      .from("atleta_documentos")
-      .select(`
-        id,
-        tipo,
-        status,
-        enviado_em,
-        analisado_em
-      `)
-      .eq("atleta_id", id)
-      .order("tipo");
+  const {
+    data: documentos,
+  } = await supabase
+    .from("atleta_documentos")
+    .select(`
+      id,
+      tipo,
+      status
+    `)
+    .eq(
+      "atleta_id",
+      id
+    );
 
-  const { data: vinculo } =
-    await supabase
-      .from("atleta_vinculos")
-      .select("*")
-      .eq("atleta_id", id)
-      .order("criado_em", {
+  const {
+    data: vinculo,
+  } = await supabase
+    .from("atleta_vinculos")
+    .select("*")
+    .eq(
+      "atleta_id",
+      id
+    )
+    .order(
+      "criado_em",
+      {
         ascending: false,
-      })
-      .limit(1)
-      .maybeSingle();
+      }
+    )
+    .limit(1)
+    .maybeSingle();
 
-  const { data: termo } =
-    await supabase
-      .from("termos_compromisso")
-      .select(`
-        id,
-        versao,
-        titulo,
-        status,
-        gerado_em,
-        liberado_em,
-        assinado_em,
-        aceite
-      `)
-      .eq("atleta_id", id)
-      .order("criado_em", {
+  const {
+    data: termo,
+  } = await supabase
+    .from("termos_compromisso")
+    .select(`
+      id,
+      status,
+      assinado_em,
+      aceite
+    `)
+    .eq(
+      "atleta_id",
+      id
+    )
+    .order(
+      "criado_em",
+      {
         ascending: false,
-      })
-      .limit(1)
-      .maybeSingle();
+      }
+    )
+    .limit(1)
+    .maybeSingle();
 
   const hoje =
-    new Intl.DateTimeFormat("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    }).format(new Date());
+    new Intl.DateTimeFormat(
+      "pt-BR",
+      {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }
+    ).format(
+      new Date()
+    );
 
   const codigoFicha =
     `FA-${atleta.id
@@ -126,15 +169,71 @@ export default async function FichaIndividualPage({
       .substring(0, 8)
       .toUpperCase()}`;
 
-  const documentosAprovados =
+  const tiposObrigatorios = [
+    "identidade",
+    "residencia",
+    "eleitoral",
+  ];
+
+  const docsObrigatorios =
     (documentos || []).filter(
-      (documento) =>
-        documento.status === "aprovado"
+      (doc) =>
+        tiposObrigatorios.includes(
+          doc.tipo
+        )
+    );
+
+  const documentosAprovados =
+    docsObrigatorios.filter(
+      (doc) =>
+        doc.status === "aprovado"
     ).length;
+
+  const documentacaoCompleta =
+    documentosAprovados ===
+    tiposObrigatorios.length;
+
+  const situacaoDocumental =
+    documentacaoCompleta
+      ? "Completa"
+      : `${documentosAprovados}/${tiposObrigatorios.length} aprovados`;
+
+  const situacaoVinculo =
+    vinculo
+      ? textoStatus(
+          vinculo.status
+        )
+      : "Sem vínculo";
+
+  const situacaoTermo =
+    termo
+      ? textoStatus(
+          termo.status
+        )
+      : "Não gerado";
+
+  const cidadeUf =
+    [
+      atleta.cidade,
+      atleta.uf,
+    ]
+      .filter(Boolean)
+      .join(" / ") ||
+    "Não informado";
+
+  const emergenciaNome =
+    atleta.emergencia_nome ||
+    atleta.contato_emergencia;
+
+  const emergenciaTelefone =
+    atleta.emergencia_telefone ||
+    atleta.telefone_emergencia;
 
   return (
     <main className="pagina">
+
       <div className="barra-acoes nao-imprimir">
+
         <div>
           <Link
             href="/admin/relatorios/esportivo/ficha-atleta"
@@ -143,393 +242,386 @@ export default async function FichaIndividualPage({
             ← Selecionar outro atleta
           </Link>
 
-          <h1>Ficha do Atleta</h1>
+          <h1>
+            Ficha resumida do atleta
+          </h1>
 
           <p>
-            Visualização cadastral e emissão do documento oficial.
+            Versão otimizada para
+            impressão em uma folha A4.
           </p>
         </div>
 
         <BotaoImprimir />
+
       </div>
 
-      <section className="documento-oficial">
-        <div className="cabecalho-documento">
-          <div className="marca">
+
+      <section className="ficha">
+
+        <header className="cabecalho">
+
+          <div className="identidade-clube">
+
             <img
               src="/escudo.png"
               alt="A.D. Cannabrava"
+              className="escudo"
             />
 
             <div>
-              <div className="nome-associacao">
-                ASSOCIAÇÃO DESPORTIVA CANNABRAVA
-              </div>
-
-              <div className="subtitulo-associacao">
-                A.D. CANNABRAVA
-              </div>
-
-              <div className="sistema">
-                Sistema Oficial de Gestão
-              </div>
-            </div>
-          </div>
-
-          <div className="identificacao-documento">
-            <strong>FICHA CADASTRAL DO ATLETA</strong>
-            <span>Código: {codigoFicha}</span>
-            <span>Emissão: {hoje}</span>
-          </div>
-        </div>
-
-        <div className="faixa-documento">
-          IDENTIFICAÇÃO DO ATLETA
-        </div>
-
-        <div className="grade grade-4">
-          <DocumentoLinha
-            titulo="Nome completo"
-            valor={atleta.nome}
-          />
-
-          <DocumentoLinha
-            titulo="Apelido"
-            valor={atleta.apelido}
-          />
-
-          <DocumentoLinha
-            titulo="CPF"
-            valor={atleta.cpf}
-          />
-
-          <DocumentoLinha
-            titulo="RG"
-            valor={atleta.rg}
-          />
-
-          <DocumentoLinha
-            titulo="Data de nascimento"
-            valor={formatarData(atleta.data_nascimento)}
-          />
-
-          <DocumentoLinha
-            titulo="Telefone"
-            valor={atleta.telefone}
-          />
-
-          <DocumentoLinha
-            titulo="E-mail"
-            valor={atleta.email}
-          />
-
-          <DocumentoLinha
-            titulo="Situação cadastral"
-            valor={
-              <span className="status">
-                {textoStatus(atleta.status)}
+              <span className="associacao">
+                ASSOCIAÇÃO DESPORTIVA
+                CANNABRAVA
               </span>
-            }
-          />
-        </div>
 
-        <div className="faixa-documento">
-          ENDEREÇO
-        </div>
+              <h2>
+                FICHA RESUMIDA DO ATLETA
+              </h2>
 
-        <div className="grade grade-4">
-          <DocumentoLinha
-            titulo="CEP"
-            valor={atleta.cep}
-          />
+              <small>
+                Força, Foco e União
+              </small>
+            </div>
 
-          <DocumentoLinha
-            titulo="Logradouro"
-            valor={atleta.logradouro}
-          />
-
-          <DocumentoLinha
-            titulo="Número"
-            valor={atleta.numero}
-          />
-
-          <DocumentoLinha
-            titulo="Complemento"
-            valor={atleta.complemento}
-          />
-
-          <DocumentoLinha
-            titulo="Bairro"
-            valor={atleta.bairro}
-          />
-
-          <DocumentoLinha
-            titulo="Cidade"
-            valor={atleta.cidade}
-          />
-
-          <DocumentoLinha
-            titulo="UF"
-            valor={atleta.uf}
-          />
-        </div>
-
-        <div className="faixa-documento">
-          INFORMAÇÕES ESPORTIVAS
-        </div>
-
-        <div className="grade grade-4">
-          <DocumentoLinha
-            titulo="Modalidade"
-            valor={atleta.modalidade}
-          />
-
-          <DocumentoLinha
-            titulo="Posição"
-            valor={atleta.posicao}
-          />
-
-          <DocumentoLinha
-            titulo="Número da camisa"
-            valor={atleta.numero_camisa}
-          />
-
-          <DocumentoLinha
-            titulo="Pé preferencial"
-            valor={atleta.pe_preferencial}
-          />
-
-          <DocumentoLinha
-            titulo="Altura"
-            valor={
-              atleta.altura
-                ? `${atleta.altura} m`
-                : null
-            }
-          />
-
-          <DocumentoLinha
-            titulo="Peso"
-            valor={
-              atleta.peso
-                ? `${atleta.peso} kg`
-                : null
-            }
-          />
-
-          <DocumentoLinha
-            titulo="Registro esportivo"
-            valor={atleta.registro_esportivo}
-          />
-        </div>
-
-        <div className="faixa-documento">
-          CONTATO DE EMERGÊNCIA
-        </div>
-
-        <div className="grade grade-3">
-          <DocumentoLinha
-            titulo="Nome"
-            valor={atleta.emergencia_nome}
-          />
-
-          <DocumentoLinha
-            titulo="Parentesco"
-            valor={atleta.emergencia_parentesco}
-          />
-
-          <DocumentoLinha
-            titulo="Telefone"
-            valor={atleta.emergencia_telefone}
-          />
-        </div>
-
-        <div className="faixa-documento">
-          VÍNCULO COM A ASSOCIAÇÃO
-        </div>
-
-        <div className="grade grade-4">
-          <DocumentoLinha
-            titulo="Modalidade"
-            valor={vinculo?.modalidade}
-          />
-
-          <DocumentoLinha
-            titulo="Temporada"
-            valor={vinculo?.temporada}
-          />
-
-          <DocumentoLinha
-            titulo="Início do vínculo"
-            valor={formatarData(vinculo?.data_inicio)}
-          />
-
-          <DocumentoLinha
-            titulo="Fim do vínculo"
-            valor={formatarData(vinculo?.data_fim)}
-          />
-
-          <DocumentoLinha
-            titulo="Situação do vínculo"
-            valor={textoStatus(vinculo?.status)}
-          />
-        </div>
-
-        <div className="faixa-documento">
-          CONTROLE DOCUMENTAL
-        </div>
-
-        <div className="resumo-documental">
-          <div>
-            <strong>{documentos?.length || 0}</strong>
-            <span>Documentos cadastrados</span>
           </div>
 
-          <div>
-            <strong>{documentosAprovados}</strong>
-            <span>Documentos aprovados</span>
+
+          <div className="dados-documento">
+
+            <strong>
+              {codigoFicha}
+            </strong>
+
+            <span>
+              Emissão: {hoje}
+            </span>
+
           </div>
+
+        </header>
+
+
+        <section className="identificacao">
+
+          <div className="foto">
+
+            {atleta.foto_url ? (
+              <img
+                src={atleta.foto_url}
+                alt={atleta.nome}
+              />
+            ) : (
+              <div className="sem-foto">
+                FOTO
+              </div>
+            )}
+
+          </div>
+
+
+          <div className="dados-principais">
+
+            <div className="nome-status">
+
+              <div>
+                <span className="rotulo">
+                  ATLETA
+                </span>
+
+                <h3>
+                  {atleta.nome}
+                </h3>
+
+                {atleta.apelido && (
+                  <small>
+                    Apelido: {
+                      atleta.apelido
+                    }
+                  </small>
+                )}
+              </div>
+
+
+              <div className="status-atleta">
+                {textoStatus(
+                  atleta.status
+                )}
+              </div>
+
+            </div>
+
+
+            <div className="grade grade-3">
+
+              <Campo
+                titulo="CPF"
+                valor={atleta.cpf}
+              />
+
+              <Campo
+                titulo="RG"
+                valor={atleta.rg}
+              />
+
+              <Campo
+                titulo="Nascimento"
+                valor={formatarData(
+                  atleta.data_nascimento
+                )}
+              />
+
+              <Campo
+                titulo="Telefone"
+                valor={
+                  atleta.telefone
+                }
+              />
+
+              <Campo
+                titulo="E-mail"
+                valor={
+                  atleta.email
+                }
+              />
+
+              <Campo
+                titulo="Cidade / UF"
+                valor={
+                  cidadeUf
+                }
+              />
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+        <section className="secao">
+
+          <div className="titulo-secao">
+            DADOS ESPORTIVOS
+          </div>
+
+          <div className="grade grade-4">
+
+            <Campo
+              titulo="Modalidade"
+              valor={
+                atleta.modalidade
+              }
+            />
+
+            <Campo
+              titulo="Posição"
+              valor={
+                atleta.posicao
+              }
+            />
+
+            <Campo
+              titulo="Camisa"
+              valor={
+                atleta.numero_camisa
+              }
+            />
+
+            <Campo
+              titulo="Pé preferencial"
+              valor={
+                atleta.pe_preferencial
+              }
+            />
+
+          </div>
+
+        </section>
+
+
+        <section className="secao">
+
+          <div className="titulo-secao">
+            CONTATO DE EMERGÊNCIA
+          </div>
+
+          <div className="grade grade-3">
+
+            <Campo
+              titulo="Nome"
+              valor={
+                emergenciaNome
+              }
+            />
+
+            <Campo
+              titulo="Parentesco"
+              valor={
+                atleta.emergencia_parentesco
+              }
+            />
+
+            <Campo
+              titulo="Telefone"
+              valor={
+                emergenciaTelefone
+              }
+            />
+
+          </div>
+
+        </section>
+
+
+        <section className="secao">
+
+          <div className="titulo-secao">
+            SITUAÇÃO CADASTRAL
+          </div>
+
+          <div className="situacao-grid">
+
+            <div className="situacao-card">
+              <span>
+                DOCUMENTAÇÃO
+              </span>
+
+              <strong
+                className={
+                  documentacaoCompleta
+                    ? "ok"
+                    : ""
+                }
+              >
+                {
+                  situacaoDocumental
+                }
+              </strong>
+            </div>
+
+
+            <div className="situacao-card">
+              <span>
+                VÍNCULO
+              </span>
+
+              <strong>
+                {
+                  situacaoVinculo
+                }
+              </strong>
+            </div>
+
+
+            <div className="situacao-card">
+              <span>
+                TERMO
+              </span>
+
+              <strong>
+                {
+                  situacaoTermo
+                }
+              </strong>
+            </div>
+
+          </div>
+
+        </section>
+
+
+        <section className="secao vinculo-resumo">
+
+          <div className="titulo-secao">
+            VÍNCULO ESPORTIVO
+          </div>
+
+          <div className="grade grade-4">
+
+            <Campo
+              titulo="Modalidade"
+              valor={
+                vinculo?.modalidade
+              }
+            />
+
+            <Campo
+              titulo="Temporada"
+              valor={
+                vinculo?.temporada
+              }
+            />
+
+            <Campo
+              titulo="Início"
+              valor={
+                formatarData(
+                  vinculo?.data_inicio
+                )
+              }
+            />
+
+            <Campo
+              titulo="Fim"
+              valor={
+                formatarData(
+                  vinculo?.data_fim
+                )
+              }
+            />
+
+          </div>
+
+        </section>
+
+
+        <footer className="rodape">
 
           <div>
             <strong>
-              {termo
-                ? textoStatus(termo.status)
-                : "Não gerado"}
-            </strong>
-            <span>Termo de compromisso</span>
-          </div>
-        </div>
-
-        {(documentos || []).length > 0 && (
-          <table className="tabela-documentos">
-            <thead>
-              <tr>
-                <th>Documento</th>
-                <th>Situação</th>
-                <th>Envio</th>
-                <th>Análise</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {(documentos || []).map((documento) => (
-                <tr key={documento.id}>
-                  <td>
-                    {documento.tipo
-                      .replaceAll("_", " ")
-                      .toUpperCase()}
-                  </td>
-
-                  <td>
-                    {textoStatus(documento.status)}
-                  </td>
-
-                  <td>
-                    {formatarData(documento.enviado_em)}
-                  </td>
-
-                  <td>
-                    {formatarData(documento.analisado_em)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-
-        <div className="faixa-documento">
-          TERMO DE COMPROMISSO
-        </div>
-
-        <div className="grade grade-4">
-          <DocumentoLinha
-            titulo="Situação"
-            valor={
-              termo
-                ? textoStatus(termo.status)
-                : "Não gerado"
-            }
-          />
-
-          <DocumentoLinha
-            titulo="Versão"
-            valor={termo?.versao}
-          />
-
-          <DocumentoLinha
-            titulo="Data de geração"
-            valor={formatarData(termo?.gerado_em)}
-          />
-
-          <DocumentoLinha
-            titulo="Data de assinatura"
-            valor={formatarData(termo?.assinado_em)}
-          />
-        </div>
-
-        <div className="declaracao">
-          <strong>DECLARAÇÃO</strong>
-
-          <p>
-            A presente ficha consolida os dados cadastrais,
-            esportivos e documentais registrados no Sistema
-            Oficial de Gestão da Associação Desportiva Cannabrava
-            para fins de controle administrativo e esportivo.
-          </p>
-        </div>
-
-        <div className="assinaturas">
-          <div className="assinatura">
-            <div className="linha-assinatura" />
-
-            <strong>
-              {atleta.nome}
+              A.D. CANNABRAVA
             </strong>
 
-            <span>Atleta</span>
+            <span>
+              Associação Desportiva
+              Cannabrava
+            </span>
           </div>
 
-          <div className="assinatura">
-            <div className="linha-assinatura" />
 
-            <strong>
-              Associação Desportiva Cannabrava
-            </strong>
-
-            <span>Responsável pela entidade</span>
-          </div>
-        </div>
-
-        <div className="rodape-documento">
-          <div>
-            Associação Desportiva Cannabrava
+          <div className="rodape-centro">
+            Documento emitido pelo
+            sistema de gestão da entidade
           </div>
 
-          <div>
-            Documento emitido pelo Sistema Oficial de Gestão
-          </div>
 
-          <div>
+          <div className="rodape-codigo">
             {codigoFicha}
           </div>
-        </div>
+
+        </footer>
+
       </section>
 
+
       <style>{`
+
         * {
           box-sizing: border-box;
         }
 
         .pagina {
-          padding: 20px 30px 35px;
-          max-width: 1500px;
+          max-width: 1100px;
           margin: 0 auto;
+          padding: 20px;
+          color: #172033;
         }
 
         .barra-acoes {
           display: flex;
-          justify-content: space-between;
           align-items: flex-end;
+          justify-content: space-between;
           gap: 20px;
           margin-bottom: 18px;
         }
@@ -537,274 +629,314 @@ export default async function FichaIndividualPage({
         .barra-acoes h1 {
           margin: 5px 0 2px;
           color: #082e69;
-          font-size: 30px;
+          font-size: 28px;
         }
 
         .barra-acoes p {
           margin: 0;
           color: #64748b;
-          font-size: 13px;
+          font-size: 12px;
         }
 
         .voltar {
           color: #1763d6;
           text-decoration: none;
-          font-size: 12px;
-          font-weight: 600;
+          font-size: 11px;
+          font-weight: 700;
         }
 
-        .documento-oficial {
-          width: 100%;
-          background: #ffffff;
-          border: 1px solid #cfd9e6;
-          box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
-          padding: 28px 32px 22px;
-          color: #172033;
+        .ficha {
+          background: #fff;
+          border: 1px solid #ccd7e3;
+          box-shadow:
+            0 5px 18px
+            rgba(15, 23, 42, .06);
+          padding: 24px 26px 18px;
         }
 
-        .cabecalho-documento {
+        .cabecalho {
           display: flex;
-          align-items: center;
           justify-content: space-between;
-          gap: 30px;
-          padding-bottom: 16px;
+          align-items: center;
+          gap: 20px;
+          padding-bottom: 12px;
           border-bottom: 3px solid #082e69;
         }
 
-        .marca {
+        .identidade-clube {
           display: flex;
           align-items: center;
-          gap: 16px;
+          gap: 14px;
         }
 
-        .marca img {
-          width: 78px;
-          height: 78px;
+        .escudo {
+          width: 62px;
+          height: 62px;
           object-fit: contain;
         }
 
-        .nome-associacao {
-          color: #082e69;
-          font-size: 20px;
+        .associacao {
+          color: #168447;
+          font-size: 9px;
           font-weight: 900;
-          letter-spacing: .025em;
+          letter-spacing: .09em;
         }
 
-        .subtitulo-associacao {
-          margin-top: 2px;
-          color: #168447;
-          font-size: 13px;
+        .identidade-clube h2 {
+          margin: 3px 0 2px;
+          color: #082e69;
+          font-size: 19px;
+          line-height: 1.1;
+        }
+
+        .identidade-clube small {
+          color: #64748b;
+          font-size: 9px;
+        }
+
+        .dados-documento {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 3px;
+          color: #64748b;
+          font-size: 9px;
+        }
+
+        .dados-documento strong {
+          color: #082e69;
+          font-size: 11px;
+        }
+
+        .identificacao {
+          display: grid;
+          grid-template-columns:
+            105px 1fr;
+          gap: 16px;
+          padding: 15px 0 5px;
+        }
+
+        .foto {
+          width: 105px;
+          height: 132px;
+          border: 1px solid #cfd8e3;
+          border-radius: 8px;
+          overflow: hidden;
+          background: #f4f7fa;
+        }
+
+        .foto img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .sem-foto {
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #94a3b8;
+          font-size: 10px;
           font-weight: 800;
         }
 
-        .sistema {
-          margin-top: 4px;
-          color: #64748b;
-          font-size: 11px;
+        .dados-principais {
+          min-width: 0;
         }
 
-        .identificacao-documento {
-          min-width: 250px;
-          text-align: right;
+        .nome-status {
           display: flex;
-          flex-direction: column;
-          gap: 3px;
-          color: #475569;
-          font-size: 11px;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 14px;
+          margin-bottom: 9px;
         }
 
-        .identificacao-documento strong {
+        .rotulo {
+          display: block;
+          color: #168447;
+          font-size: 8px;
+          font-weight: 900;
+          letter-spacing: .08em;
+        }
+
+        .nome-status h3 {
+          margin: 2px 0;
           color: #082e69;
-          font-size: 14px;
+          font-size: 20px;
         }
 
-        .faixa-documento {
-          margin-top: 17px;
-          padding: 7px 10px;
-          background: #eef4fb;
+        .nome-status small {
+          color: #64748b;
+          font-size: 9px;
+        }
+
+        .status-atleta {
+          padding: 5px 9px;
+          border-radius: 999px;
+          background: #e8f6ee;
+          color: #10733d;
+          font-size: 8px;
+          font-weight: 900;
+          text-transform: uppercase;
+        }
+
+        .secao {
+          margin-top: 11px;
+        }
+
+        .titulo-secao {
+          padding: 5px 8px;
           border-left: 4px solid #168447;
+          background: #eef4fb;
           color: #082e69;
-          font-size: 11px;
+          font-size: 8px;
           font-weight: 900;
           letter-spacing: .07em;
         }
 
         .grade {
           display: grid;
-          gap: 0;
-          border-left: 1px solid #dce3eb;
-          border-top: 1px solid #dce3eb;
-        }
-
-        .grade-4 {
-          grid-template-columns: repeat(4, 1fr);
+          border-left: 1px solid #dde5ed;
+          border-top: 1px solid #dde5ed;
         }
 
         .grade-3 {
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns:
+            repeat(3, 1fr);
         }
 
-        .campo-documento {
-          min-height: 55px;
-          padding: 9px 10px;
-          border-right: 1px solid #dce3eb;
-          border-bottom: 1px solid #dce3eb;
+        .grade-4 {
+          grid-template-columns:
+            repeat(4, 1fr);
         }
 
-        .campo-titulo {
-          color: #6b778c;
-          font-size: 9px;
+        .campo {
+          min-height: 43px;
+          padding: 7px 8px;
+          border-right: 1px solid #dde5ed;
+          border-bottom: 1px solid #dde5ed;
+        }
+
+        .campo span {
+          display: block;
+          color: #718096;
+          font-size: 7px;
           font-weight: 800;
           text-transform: uppercase;
-          letter-spacing: .04em;
         }
 
-        .campo-valor {
-          margin-top: 4px;
+        .valor {
+          display: block;
+          margin-top: 3px;
           color: #172033;
-          font-size: 12px;
-          font-weight: 650;
+          font-size: 10px;
+          line-height: 1.15;
           overflow-wrap: anywhere;
         }
 
-        .status {
-          color: #08733d;
-          font-weight: 800;
-        }
-
-        .resumo-documental {
+        .situacao-grid {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          border-left: 1px solid #dce3eb;
+          grid-template-columns:
+            repeat(3, 1fr);
+          border-left: 1px solid #dde5ed;
         }
 
-        .resumo-documental > div {
-          padding: 11px 12px;
-          border-right: 1px solid #dce3eb;
-          border-bottom: 1px solid #dce3eb;
-          display: flex;
-          flex-direction: column;
+        .situacao-card {
+          min-height: 55px;
+          padding: 8px 10px;
+          border-right: 1px solid #dde5ed;
+          border-bottom: 1px solid #dde5ed;
         }
 
-        .resumo-documental strong {
+        .situacao-card span {
+          display: block;
+          color: #718096;
+          font-size: 7px;
+          font-weight: 900;
+        }
+
+        .situacao-card strong {
+          display: block;
+          margin-top: 5px;
           color: #082e69;
-          font-size: 16px;
+          font-size: 11px;
         }
 
-        .resumo-documental span {
-          margin-top: 2px;
-          color: #64748b;
-          font-size: 9px;
-          text-transform: uppercase;
+        .situacao-card strong.ok {
+          color: #11713e;
         }
 
-        .tabela-documentos {
-          width: 100%;
-          border-collapse: collapse;
-          font-size: 10px;
-        }
-
-        .tabela-documentos th {
-          padding: 7px 9px;
-          text-align: left;
-          background: #f7f9fc;
-          color: #475569;
-          border: 1px solid #dce3eb;
-          font-size: 9px;
-        }
-
-        .tabela-documentos td {
-          padding: 7px 9px;
-          border: 1px solid #dce3eb;
-          color: #334155;
-        }
-
-        .declaracao {
-          margin-top: 18px;
-          padding: 12px 14px;
-          border: 1px solid #dce3eb;
-          background: #fbfcfe;
-        }
-
-        .declaracao strong {
-          color: #082e69;
-          font-size: 10px;
-        }
-
-        .declaracao p {
-          margin: 5px 0 0;
-          color: #475569;
-          font-size: 10px;
-          line-height: 1.55;
-          text-align: justify;
-        }
-
-        .assinaturas {
+        .rodape {
           display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 70px;
-          margin: 55px 45px 30px;
-        }
-
-        .assinatura {
-          text-align: center;
-          display: flex;
-          flex-direction: column;
-          font-size: 10px;
-        }
-
-        .linha-assinatura {
-          border-top: 1px solid #334155;
-          margin-bottom: 6px;
-        }
-
-        .assinatura strong {
-          color: #172033;
-        }
-
-        .assinatura span {
-          color: #64748b;
-          margin-top: 2px;
-        }
-
-        .rodape-documento {
+          grid-template-columns:
+            1fr 1.4fr 1fr;
+          align-items: center;
+          gap: 10px;
+          margin-top: 15px;
           padding-top: 8px;
           border-top: 2px solid #082e69;
-          display: grid;
-          grid-template-columns: 1fr 1fr 1fr;
-          gap: 10px;
           color: #64748b;
+          font-size: 7px;
+        }
+
+        .rodape strong {
+          display: block;
+          color: #082e69;
           font-size: 8px;
         }
 
-        .rodape-documento div:nth-child(2) {
+        .rodape span {
+          display: block;
+          margin-top: 1px;
+        }
+
+        .rodape-centro {
           text-align: center;
         }
 
-        .rodape-documento div:last-child {
+        .rodape-codigo {
           text-align: right;
+          font-weight: 800;
         }
 
-        @media max-width: 950px {
-          .grade-4,
-          .grade-3 {
-            grid-template-columns: repeat(2, 1fr);
+
+        @media(max-width:700px) {
+
+          .identificacao {
+            grid-template-columns:
+              86px 1fr;
           }
+
+          .foto {
+            width: 86px;
+            height: 110px;
+          }
+
+          .grade-4 {
+            grid-template-columns:
+              repeat(2, 1fr);
+          }
+
         }
+
 
         @media print {
+
           @page {
             size: A4 portrait;
-            margin: 5mm;
+            margin: 7mm;
           }
 
           html,
           body {
             width: 210mm !important;
-            min-height: 297mm !important;
+            height: 297mm !important;
             margin: 0 !important;
             padding: 0 !important;
-            background: #ffffff !important;
+            background: white !important;
           }
 
           header,
@@ -821,166 +953,177 @@ export default async function FichaIndividualPage({
             padding: 0 !important;
           }
 
-          .documento-oficial {
+          .ficha {
             width: 100% !important;
-            margin: 0 !important;
-            padding: 3mm 4mm 2mm !important;
+            min-height: 0 !important;
+            padding:
+              3mm
+              4mm
+              2mm !important;
+
             border: 0 !important;
-            border-radius: 0 !important;
             box-shadow: none !important;
+
+            page-break-after: avoid;
+            break-after: avoid;
           }
 
-          .cabecalho-documento {
-            gap: 4mm;
+          .cabecalho {
+            gap: 3mm;
             padding-bottom: 2mm;
             border-bottom-width: 2px;
           }
 
-          .marca {
+          .escudo {
+            width: 13mm;
+            height: 13mm;
+          }
+
+          .identidade-clube {
             gap: 3mm;
           }
 
-          .marca img {
-            width: 14mm;
-            height: 14mm;
+          .associacao {
+            font-size: 6.2px;
           }
 
-          .nome-associacao {
-            font-size: 12px;
+          .identidade-clube h2 {
+            margin: 1px 0;
+            font-size: 10px;
+          }
+
+          .identidade-clube small {
+            font-size: 5.8px;
+          }
+
+          .dados-documento {
+            font-size: 5.8px;
+          }
+
+          .dados-documento strong {
+            font-size: 7px;
+          }
+
+          .identificacao {
+            grid-template-columns:
+              23mm 1fr;
+            gap: 3mm;
+            padding:
+              2.5mm 0
+              0;
+          }
+
+          .foto {
+            width: 23mm;
+            height: 29mm;
+            border-radius: 1mm;
+          }
+
+          .nome-status {
+            margin-bottom: 1.5mm;
+          }
+
+          .rotulo {
+            font-size: 5.5px;
+          }
+
+          .nome-status h3 {
+            margin: 1px 0;
+            font-size: 11px;
             line-height: 1.05;
           }
 
-          .subtitulo-associacao {
-            margin-top: 1px;
-            font-size: 9px;
+          .nome-status small {
+            font-size: 5.8px;
           }
 
-          .sistema {
-            margin-top: 1px;
-            font-size: 7px;
-          }
+          .status-atleta {
+            padding: 1mm 1.5mm;
+            font-size: 5.5px;
 
-          .identificacao-documento {
-            min-width: 46mm;
-            gap: 1px;
-            font-size: 7px;
-          }
-
-          .identificacao-documento strong {
-            font-size: 9px;
-          }
-
-          .faixa-documento {
-            margin-top: 1.8mm;
-            padding: 1mm 1.7mm;
-            border-left-width: 3px;
-            font-size: 7.2px;
-            line-height: 1;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
           }
 
-          .grade {
-            gap: 0;
+          .secao {
+            margin-top: 1.8mm;
           }
 
-          .grade-4 {
-            grid-template-columns: repeat(4, 1fr) !important;
+          .titulo-secao {
+            padding:
+              .9mm 1.4mm;
+            border-left-width: 2px;
+            font-size: 5.8px;
+            line-height: 1;
+
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
 
           .grade-3 {
-            grid-template-columns: repeat(3, 1fr) !important;
+            grid-template-columns:
+              repeat(3, 1fr)
+              !important;
           }
 
-          .campo-documento {
-            min-height: 8mm;
-            padding: 1mm 1.4mm;
+          .grade-4 {
+            grid-template-columns:
+              repeat(4, 1fr)
+              !important;
           }
 
-          .campo-titulo {
-            font-size: 5.8px;
-            line-height: 1;
+          .campo {
+            min-height: 7.8mm;
+            padding:
+              1mm 1.3mm;
           }
 
-          .campo-valor {
-            margin-top: 1.2mm;
-            font-size: 7.5px;
-            line-height: 1.05;
-          }
-
-          .resumo-documental > div {
-            padding: 1.3mm 1.7mm;
-          }
-
-          .resumo-documental strong {
-            font-size: 9px;
-            line-height: 1;
-          }
-
-          .resumo-documental span {
-            margin-top: 1mm;
-            font-size: 5.5px;
-          }
-
-          .tabela-documentos {
-            font-size: 6.5px;
-          }
-
-          .tabela-documentos th {
-            padding: 1mm 1.5mm;
-            font-size: 5.8px;
-          }
-
-          .tabela-documentos td {
-            padding: 1mm 1.5mm;
-          }
-
-          .declaracao {
-            margin-top: 1.8mm;
-            padding: 1.5mm 2mm;
-          }
-
-          .declaracao strong {
-            font-size: 6.5px;
-          }
-
-          .declaracao p {
-            margin-top: 1mm;
-            font-size: 6.3px;
-            line-height: 1.25;
-          }
-
-          .assinaturas {
-            gap: 18mm;
-            margin: 7mm 10mm 3mm;
-          }
-
-          .assinatura {
-            font-size: 6.5px;
-          }
-
-          .linha-assinatura {
-            margin-bottom: 1mm;
-          }
-
-          .rodape-documento {
-            padding-top: 1.5mm;
-            border-top-width: 1px;
-            gap: 3mm;
+          .campo span {
             font-size: 5px;
           }
 
-          .faixa-documento,
-          .grade,
-          .resumo-documental,
-          .tabela-documentos,
-          .declaracao,
-          .assinaturas {
+          .valor {
+            margin-top: .8mm;
+            font-size: 6.7px;
+            line-height: 1.05;
+          }
+
+          .situacao-card {
+            min-height: 9mm;
+            padding:
+              1.2mm 1.5mm;
+          }
+
+          .situacao-card span {
+            font-size: 5px;
+          }
+
+          .situacao-card strong {
+            margin-top: 1mm;
+            font-size: 7px;
+          }
+
+          .rodape {
+            margin-top: 2.5mm;
+            padding-top: 1.5mm;
+            font-size: 5px;
+          }
+
+          .rodape strong {
+            font-size: 5.8px;
+          }
+
+          .cabecalho,
+          .identificacao,
+          .secao,
+          .rodape {
             break-inside: avoid;
             page-break-inside: avoid;
           }
         }
+
       `}</style>
+
     </main>
   );
 }
