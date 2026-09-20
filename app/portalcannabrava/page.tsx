@@ -1,3 +1,4 @@
+import ProdutosLojaSidebar from "./ProdutosLojaSidebar";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import ContadorAcessos from "./ContadorAcessos";
@@ -131,6 +132,13 @@ export default async function PortalCannabravaPage() {
           </a>
 
           <Link
+            href="/portalcannabrava/loja"
+            className="menu-loja"
+          >
+            Loja
+          </Link>
+
+          <Link
             href="/login"
             className="area-atleta"
           >
@@ -175,6 +183,8 @@ export default async function PortalCannabravaPage() {
           </div>
         </div>
 
+        <div className="lateral-portal">
+
         <aside className="patrocinadores">
           <div className="patrocinadores-titulo">
             <span>
@@ -210,6 +220,10 @@ export default async function PortalCannabravaPage() {
             </div>
           </div>
         </aside>
+
+        <ProdutosLojaSidebar />
+
+        </div>
       </section>
 
       <section
@@ -1070,7 +1084,7 @@ export default async function PortalCannabravaPage() {
             overflow-x: auto;
           }
 
-          nav a:not(.area-atleta) {
+          nav a:not(.area-atleta):not(.menu-loja) {
             display: none;
           }
 
@@ -1182,7 +1196,7 @@ export default async function PortalCannabravaPage() {
             overflow: visible;
           }
 
-          nav a:not(.area-atleta) {
+          nav a:not(.area-atleta):not(.menu-loja) {
             display: none;
           }
 
@@ -1498,6 +1512,7 @@ export default async function PortalCannabravaPage() {
           }
         }
       `}</style>
+          <ProdutosLojaSidebar />
     </main>
   );
 }

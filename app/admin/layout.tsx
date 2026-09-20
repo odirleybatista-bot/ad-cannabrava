@@ -1,3 +1,4 @@
+import PedidoLojaNotificacao from "./PedidoLojaNotificacao";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/current-user";
@@ -59,6 +60,8 @@ export default async function AdminLayout({
             <div className="avatar">
               {inicial}
             </div>
+
+            <PedidoLojaNotificacao />
 
             <AdminLogoutButton />
           </div>
@@ -169,6 +172,29 @@ export default async function AdminLayout({
 
               <Link href="/admin/relatorios/financeiro">
                 Financeiro
+              </Link>
+            </div>
+          </div>
+          <div className="grupo">
+            <button type="button">
+              Loja Cannabrava
+              <span>▼</span>
+            </button>
+
+            <div className="submenu">
+              <Link href="/admin/loja">
+                Produtos
+              </Link>
+
+              <Link href="/admin/loja/pedidos">
+                Pedidos
+              </Link>
+
+              <Link
+                href="/portalcannabrava/loja"
+                target="_blank"
+              >
+                Loja Pública
               </Link>
             </div>
           </div>
