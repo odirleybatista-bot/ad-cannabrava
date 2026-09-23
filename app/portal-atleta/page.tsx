@@ -123,7 +123,6 @@ export default async function PortalAtletaPage() {
   }
 
   const obrigatorios = [
-    "foto_3x4",
     "identidade",
     "residencia",
     "eleitoral",
@@ -154,7 +153,7 @@ export default async function PortalAtletaPage() {
     ) || false;
 
   const cadastroCompleto = Boolean(atleta.id);
-  const docsCompletos = documentosEnviados === 4;
+  const docsCompletos = documentosEnviados === 3;
   const possuiVinculo = Boolean(vinculo);
   const termoAssinado = termo?.status === "assinado";
 

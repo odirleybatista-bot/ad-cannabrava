@@ -124,7 +124,8 @@ export async function assinarTermo(
     .from("termos_compromisso")
     .update({
       status: "assinado",
-      assinado_em: agora,
+      aceite: true,
+        assinado_em: agora,
       aceite_em: agora,
       atualizado_em: agora,
     })

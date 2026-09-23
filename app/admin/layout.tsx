@@ -1,8 +1,8 @@
-import PedidoLojaNotificacao from "./PedidoLojaNotificacao";
+import PedidoLojaNotificacao from "@/components/admin/PedidoLojaNotificacao";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/current-user";
-import AdminLogoutButton from "./AdminLogoutButton";
+import AdminLogoutButton from "@/components/admin/AdminLogoutButton";
 
 export default async function AdminLayout({
   children,

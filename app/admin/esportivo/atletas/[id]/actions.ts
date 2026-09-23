@@ -42,7 +42,6 @@ export async function atualizarStatusDocumento(
     .eq("atleta_id", atletaId);
 
   const obrigatorios = [
-    "foto_3x4",
     "identidade",
     "residencia",
     "eleitoral",

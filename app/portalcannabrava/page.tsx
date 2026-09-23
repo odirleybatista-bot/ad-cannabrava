@@ -1,7 +1,7 @@
-import ProdutosLojaSidebar from "./ProdutosLojaSidebar";
+import ProdutosLojaSidebar from "@/components/portal/ProdutosLojaSidebar";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import ContadorAcessos from "./ContadorAcessos";
+import ContadorAcessos from "@/components/portal/ContadorAcessos";
 
 export const dynamic = "force-dynamic";
 
