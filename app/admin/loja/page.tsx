@@ -327,7 +327,7 @@ export default async function LojaAdminPage() {
                       />
                     ) : (
                       <img
-                        src="/escudo.png"
+                        src="/branding/escudo.png"
                         alt=""
                         className="placeholder"
                       />

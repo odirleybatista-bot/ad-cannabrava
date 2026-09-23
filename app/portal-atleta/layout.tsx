@@ -71,7 +71,7 @@ export default async function PortalAtletaLayout({
           >
 
             <img
-              src="/escudo.png"
+              src="/branding/escudo.png"
               alt="A.D. Cannabrava"
               className="h-14 w-14 object-contain"
             />

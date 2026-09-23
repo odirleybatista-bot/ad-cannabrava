@@ -290,7 +290,7 @@ export default async function FichaIndividualPage({
           <div className="identidade-clube">
 
             <img
-              src="/escudo.png"
+              src="/branding/escudo.png"
               alt="A.D. Cannabrava"
               className="escudo"
             />

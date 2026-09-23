@@ -38,7 +38,7 @@ export default function AberturaPage() {
           <div className="anel anel-2" />
 
           <img
-            src="/escudo.png"
+            src="/branding/escudo.png"
             alt="A.D. Cannabrava"
             className="escudo"
           />
@@ -50,7 +50,7 @@ export default function AberturaPage() {
           </span>
 
           <img
-            src="/cannabrava-wordmark.png"
+            src="/branding/cannabrava-wordmark.png"
             alt="Cannabrava"
             className="wordmark"
           />

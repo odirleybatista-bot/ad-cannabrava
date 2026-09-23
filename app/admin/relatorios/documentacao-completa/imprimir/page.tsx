@@ -114,7 +114,7 @@ export default async function ImprimirPage({
       <section className="relatorio">
         <header className="cabecalho">
           <img
-            src="/escudo.png"
+            src="/branding/escudo.png"
             alt="A.D. Cannabrava"
           />
 

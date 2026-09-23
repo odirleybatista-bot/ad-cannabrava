@@ -128,7 +128,7 @@ export default function LoginPage() {
     <main className="login-page">
       <section className="login-visual">
         <img
-          src="/login.png"
+          src="/auth/login.png"
           alt="A.D. Cannabrava"
           className="login-background"
         />
@@ -138,7 +138,7 @@ export default function LoginPage() {
         <div className="login-box">
           <div className="login-title">
             <img
-              src="/escudo.png"
+              src="/branding/escudo.png"
               alt="A.D. Cannabrava"
               className="login-logo"
             />

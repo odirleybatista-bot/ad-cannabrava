@@ -99,7 +99,7 @@ export default async function PortalCannabravaPage() {
       <header className="cabecalho">
         <div className="marca">
           <img
-            src="/escudo.png"
+            src="/branding/escudo.png"
             alt="A.D. Cannabrava"
           />
 
@@ -249,7 +249,7 @@ export default async function PortalCannabravaPage() {
           <article className="noticia destaque">
             <div className="imagem-noticia">
               <img
-                src="/escudo.png"
+                src="/branding/escudo.png"
                 alt="A.D. Cannabrava"
               />
             </div>
@@ -484,7 +484,7 @@ export default async function PortalCannabravaPage() {
         </div>
 
         <img
-          src="/escudo.png"
+          src="/branding/escudo.png"
           alt="A.D. Cannabrava"
         />
       </section>
@@ -627,7 +627,7 @@ export default async function PortalCannabravaPage() {
               rgba(3, 23, 55, .15) 58%,
               rgba(3, 23, 55, .02) 100%
             ),
-            url("/portal-cannabrava-hero.png");
+            url("/portal/portal-cannabrava-hero.png");
 
           background-size: cover;
           background-position: center center;

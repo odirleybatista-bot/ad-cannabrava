@@ -222,7 +222,7 @@ export default async function TermoPage() {
           <section className="documento">
             <div className="documento-cabecalho">
               <img
-                src="/escudo.png"
+                src="/branding/escudo.png"
                 alt="A.D. Cannabrava"
               />
 

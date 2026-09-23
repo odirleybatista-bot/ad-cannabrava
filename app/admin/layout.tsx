@@ -30,7 +30,7 @@ export default async function AdminLayout({
             className="marca"
           >
             <img
-              src="/escudo.png"
+              src="/branding/escudo.png"
               alt="A.D. Cannabrava"
             />
 

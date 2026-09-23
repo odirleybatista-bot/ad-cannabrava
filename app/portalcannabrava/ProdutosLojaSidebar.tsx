@@ -77,7 +77,7 @@ export default async function ProdutosLojaSidebar() {
           href="/portalcannabrava/loja"
           className="loja-sem-produtos"
         >
-          <img src="/escudo.png" alt="" />
+          <img src="/branding/escudo.png" alt="" />
 
           <strong>
             Loja Cannabrava
@@ -116,7 +116,7 @@ export default async function ProdutosLojaSidebar() {
                     />
                   ) : (
                     <img
-                      src="/escudo.png"
+                      src="/branding/escudo.png"
                       alt=""
                       className="sem-foto"
                     />

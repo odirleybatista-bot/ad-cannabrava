@@ -76,7 +76,7 @@ export default function CadastroPage() {
     <main className="cadastro-page">
       <section className="cadastro-visual">
         <img
-          src="/login.png"
+          src="/auth/login.png"
           alt="A.D. Cannabrava"
           className="cadastro-background"
         />
@@ -86,7 +86,7 @@ export default function CadastroPage() {
         <div className="cadastro-box">
           <div className="cadastro-title">
             <img
-              src="/escudo.png"
+              src="/branding/escudo.png"
               alt="A.D. Cannabrava"
               className="cadastro-logo"
             />

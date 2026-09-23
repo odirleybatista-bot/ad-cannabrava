@@ -111,7 +111,7 @@ export default async function LojaCannabravaPage() {
           className="marca"
         >
           <img
-            src="/escudo.png"
+            src="/branding/escudo.png"
             alt="A.D. Cannabrava"
           />
 
@@ -171,7 +171,7 @@ export default async function LojaCannabravaPage() {
       <footer className="rodape">
 
         <img
-          src="/escudo.png"
+          src="/branding/escudo.png"
           alt=""
         />
 

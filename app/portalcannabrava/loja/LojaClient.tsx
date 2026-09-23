@@ -130,7 +130,7 @@ function Galeria({
         ) : (
           <div className="sem-imagem">
             <img
-              src="/escudo.png"
+              src="/branding/escudo.png"
               alt=""
             />
 
@@ -824,7 +824,7 @@ export default function LojaClient({
           <div className="vazio">
 
             <img
-              src="/escudo.png"
+              src="/branding/escudo.png"
               alt=""
             />
 
@@ -953,7 +953,7 @@ export default function LojaClient({
                             />
                           ) : (
                             <img
-                              src="/escudo.png"
+                              src="/branding/escudo.png"
                               alt=""
                             />
                           )}
@@ -1228,7 +1228,7 @@ export default function LojaClient({
           <div className="sucesso">
 
             <img
-              src="/escudo.png"
+              src="/branding/escudo.png"
               alt=""
             />
 

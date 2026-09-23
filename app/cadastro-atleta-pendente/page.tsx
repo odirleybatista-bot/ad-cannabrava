@@ -19,7 +19,7 @@ export default async function CadastroAtletaPendentePage() {
       <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
 
         <img
-          src="/escudo.png"
+          src="/branding/escudo.png"
           alt="A.D. Cannabrava"
           className="mx-auto h-20 w-20 object-contain"
         />
